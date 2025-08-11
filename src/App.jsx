@@ -1,7 +1,7 @@
-   import React, { useState } from "react";
+import React, { useState } from "react";
 
 export default function JobPortal() {
-  const [view, setView] = useState("poster"); // "poster" or "seeker"
+  const [page, setPage] = useState("poster"); // 'poster' or 'seeker'
   const [jobs, setJobs] = useState([]);
   const [formData, setFormData] = useState({
     role: "",
@@ -11,9 +11,12 @@ export default function JobPortal() {
     description: ""
   });
   const [errors, setErrors] = useState({});
-  const [expanded, setExpanded] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
+
+  // Separate expand states for poster & seeker
+  const [expandedPoster, setExpandedPoster] = useState({});
+  const [expandedSeeker, setExpandedSeeker] = useState({});
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -53,137 +56,73 @@ export default function JobPortal() {
     setShowForm(false);
   };
 
-  const toggleExpand = (index) => {
-    setExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
-
   const handleEdit = (index) => {
     setFormData(jobs[index]);
     setEditIndex(index);
     setShowForm(true);
   };
 
-  const handleApply = (job) => {
-    alert(`You have applied for ${job.role} at ${job.location}`);
+  const toggleExpandPoster = (index) => {
+    setExpandedPoster((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
-  const JobCard = ({ job, index, isPoster }) => {
-    const isExpanded = expanded[index] || false;
-    const shortDesc =
-      job.description.length > 100
-        ? job.description.substring(0, 100) + "..."
-        : job.description;
-
-    return (
-      <div className="bg-white border border-gray-200 shadow-md rounded-lg p-4 mb-4">
-        <div className="flex justify-between items-start">
-          {/* Left side - Job details */}
-          <div>
-            <div className="flex flex-wrap gap-4 text-blue-900 font-medium mb-2">
-              <span>🏢 <strong>Role:</strong> {job.role}</span>
-              <span>💰 <strong>Package:</strong> {job.package}</span>
-              <span>📅 <strong>Exp:</strong> {job.experience}</span>
-              <span>📍 <strong>Location:</strong> {job.location}</span>
-            </div>
-            <p className="text-gray-700 text-sm whitespace-pre-line">
-              📝 <strong>Description:</strong>{" "}
-              {isExpanded ? job.description : shortDesc}
-            </p>
-            {job.description.length > 100 && (
-              <button
-                onClick={() => toggleExpand(index)}
-                className="text-blue-500 text-sm mt-1 underline"
-              >
-                {isExpanded ? "View Less" : "View More"}
-              </button>
-            )}
-          </div>
-
-          {/* Right side - Action button */}
-          <div className="flex-shrink-0">
-            {isPoster ? (
-              <button
-                onClick={() => handleEdit(index)}
-                className=" bg-gradient-to-r from-yellow-400 to-blue-400   text-white px-4 py-2 rounded-full text-sm shadow-md hover:scale-105 transition"
-              >
-                ✏️ Edit
-              </button>
-            ) : (
-              <button
-                onClick={() => handleApply(job)}
-                className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-4 py-2 rounded-full text-sm shadow-md hover:scale-105 transition"
-              >
-                ✅ Apply
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const toggleExpandSeeker = (index) => {
+    setExpandedSeeker((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   return (
     <div className="bg-white min-h-screen p-6 max-w-5xl mx-auto">
       {/* Header */}
       <h1 className="text-center text-4xl font-bold bg-blue-400 bg-clip-text text-transparent mb-6">
-        <span>🚀</span> Job Portal
+       Job Portal
       </h1>
 
-      {/* UI Switcher */}
+      {/* Navigation */}
       <div className="flex justify-center gap-4 mb-6">
         <button
-          onClick={() => setView("poster")}
-          className={`px-6 py-2 rounded-full font-semibold shadow-md transition ${
-            view === "poster"
+          onClick={() => setPage("poster")}
+          className={`px-6 py-2 rounded-full font-semibold shadow-md ${
+            page === "poster"
               ? "bg-gradient-to-r from-yellow-400 to-blue-400 text-white"
-              : "bg-yellow-400 text-white "
+              : "bg-yellow-400 text-white"
           }`}
         >
           Job Poster
         </button>
         <button
-          onClick={() => setView("seeker")}
-          className={`px-6 py-2 rounded-full font-semibold shadow-md transition ${
-            view === "seeker"
+          onClick={() => setPage("seeker")}
+          className={`px-6 py-2 rounded-full font-semibold shadow-md ${
+            page === "seeker"
               ? "bg-gradient-to-r from-yellow-400 to-blue-400 text-white"
-              : "bg-blue-400 text-white "
+              : "bg-blue-400 text-white"
           }`}
         >
           Job Seeker
         </button>
       </div>
 
-      {/* Poster UI */}
-      {view === "poster" && (
-        <div>
-          {!showForm && (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:scale-105 transition"
-                  onClick={() => setShowForm(true)}
-                >
-                  + Post a Job
-                </button>
-                <p className="text-lg font-semibold text-gray-700">
-                  Total Jobs Posted: {jobs.length}
-                </p>
-              </div>
+      {/* Job Poster Page */}
+      {page === "poster" && (
+        <>
+          <div className="flex justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-700">
+              Total Jobs Posted: {jobs.length}
+            </h2>
+            {!showForm && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-6 py-2 rounded-full shadow-md"
+              >
+                + Post a Job
+              </button>
+            )}
+          </div>
 
-              {jobs.length === 0 ? (
-                <p className="text-gray-500">No jobs posted yet.</p>
-              ) : (
-                jobs.map((job, index) => (
-                  <JobCard key={index} job={job} index={index} isPoster={true} />
-                ))
-              )}
-            </>
-          )}
-
+          {/* Form */}
           {showForm && (
             <form
-              className="bg-gradient-to-r from-yellow-400 to-blue-400 p-6 rounded-xl shadow-lg text-gray-800"
               onSubmit={handleSubmit}
+              className="bg-gradient-to-r from-yellow-400 to-blue-400 p-6 rounded-xl shadow-lg text-gray-800 mb-6"
             >
               <h2 className="text-center text-2xl font-bold text-white mb-4">
                 {editIndex !== null ? "Edit Job" : "Post a New Job"}
@@ -197,7 +136,7 @@ export default function JobPortal() {
                 onChange={handleChange}
                 className="w-full p-2 rounded-md bg-white shadow-sm focus:outline-none mb-1"
               />
-              {errors.role && <span className="text-red-600 text-xs">{errors.role}</span>}
+              {errors.role && <p className="text-red-600 text-xs">{errors.role}</p>}
 
               <label className="font-medium mt-2">Package</label>
               <input
@@ -207,7 +146,7 @@ export default function JobPortal() {
                 onChange={handleChange}
                 className="w-full p-2 rounded-md bg-white shadow-sm focus:outline-none mb-1"
               />
-              {errors.package && <span className="text-red-600 text-xs">{errors.package}</span>}
+              {errors.package && <p className="text-red-600 text-xs">{errors.package}</p>}
 
               <label className="font-medium mt-2">Experience</label>
               <input
@@ -217,7 +156,7 @@ export default function JobPortal() {
                 onChange={handleChange}
                 className="w-full p-2 rounded-md bg-white shadow-sm focus:outline-none mb-1"
               />
-              {errors.experience && <span className="text-red-600 text-xs">{errors.experience}</span>}
+              {errors.experience && <p className="text-red-600 text-xs">{errors.experience}</p>}
 
               <label className="font-medium mt-2">Location</label>
               <input
@@ -227,7 +166,7 @@ export default function JobPortal() {
                 onChange={handleChange}
                 className="w-full p-2 rounded-md bg-white shadow-sm focus:outline-none mb-1"
               />
-              {errors.location && <span className="text-red-600 text-xs">{errors.location}</span>}
+              {errors.location && <p className="text-red-600 text-xs">{errors.location}</p>}
 
               <label className="font-medium mt-2">Job Description</label>
               <textarea
@@ -236,47 +175,117 @@ export default function JobPortal() {
                 onChange={handleChange}
                 className="w-full p-2 rounded-md bg-white shadow-sm focus:outline-none min-h-[80px]"
               ></textarea>
-              {errors.description && (
-                <span className="text-red-600 text-xs">{errors.description}</span>
-              )}
+              {errors.description && <p className="text-red-600 text-xs">{errors.description}</p>}
 
               <div className="flex gap-3 mt-4">
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-6 py-2 rounded-full font-semibold shadow-md hover:scale-105 transition"
+                  className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-6 py-2 rounded-full font-semibold shadow-md"
                 >
                   {editIndex !== null ? "Update" : "Submit"}
                 </button>
                 <button
                   type="button"
-                  className="bg-gray-600 text-white px-6 py-2 rounded-full font-semibold shadow-md"
                   onClick={() => {
                     setShowForm(false);
                     setEditIndex(null);
                   }}
+                  className="bg-gray-600 text-white px-6 py-2 rounded-full font-semibold shadow-md"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           )}
-        </div>
+
+          {/* Posted Jobs */}
+          {jobs.map((job, index) => {
+            const isExpanded = expandedPoster[index] || false;
+            const shortDesc =
+              job.description.length > 100
+                ? job.description.substring(0, 100) + "..."
+                : job.description;
+
+            return (
+              <div
+                key={index}
+                className="bg-white border border-gray-200 shadow-md rounded-lg p-4 mb-4"
+              >
+                <div className="flex flex-wrap justify-between text-blue-900 font-medium mb-2">
+                  <span>🏢 <strong>Role:</strong> {job.role}</span>
+                  <span>💰 <strong>Package:</strong> {job.package}</span>
+                  <span>📅 <strong>Exp:</strong> {job.experience}</span>
+                  <span>📍 <strong>Location:</strong> {job.location}</span>
+                  <button
+                    onClick={() => handleEdit(index)}
+                    className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-3 py-1 rounded-full text-sm"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <p className="text-gray-700 text-sm whitespace-pre-line">
+                  📝 <strong>Description:</strong>{" "}
+                  {isExpanded ? job.description : shortDesc}
+                </p>
+                {job.description.length > 100 && (
+                  <button
+                    onClick={() => toggleExpandPoster(index)}
+                    className="text-blue-500 text-sm mt-1 underline"
+                  >
+                    {isExpanded ? "View Less" : "View More"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </>
       )}
 
-      {/* Seeker UI */}
-      {view === "seeker" && (
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
-            Available Jobs ({jobs.length})
+      {/* Job Seeker Page */}
+      {page === "seeker" && (
+        <>
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            Total Jobs Available: {jobs.length}
           </h2>
-          {jobs.length === 0 ? (
-            <p className="text-gray-500">No jobs available yet.</p>
-          ) : (
-            jobs.map((job, index) => (
-              <JobCard key={index} job={job} index={index} isPoster={false} />
-            ))
-          )}
-        </div>
+          {jobs.map((job, index) => {
+            const isExpanded = expandedSeeker[index] || false;
+            const shortDesc =
+              job.description.length > 100
+                ? job.description.substring(0, 100) + "..."
+                : job.description;
+
+            return (
+              <div
+                key={index}
+                className="bg-white border border-gray-200 shadow-md rounded-lg p-4 mb-4"
+              >
+                <div className="flex flex-wrap justify-between text-blue-900 font-medium mb-2">
+                  <span>🏢 <strong>Role:</strong> {job.role}</span>
+                  <span>💰 <strong>Package:</strong> {job.package}</span>
+                  <span>📅 <strong>Exp:</strong> {job.experience}</span>
+                  <span>📍 <strong>Location:</strong> {job.location}</span>
+                  <button
+                    className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-3 py-1 rounded-full text-sm"
+                  >
+                    Apply
+                  </button>
+                </div>
+                <p className="text-gray-700 text-sm whitespace-pre-line">
+                  📝 <strong>Description:</strong>{" "}
+                  {isExpanded ? job.description : shortDesc}
+                </p>
+                {job.description.length > 100 && (
+                  <button
+                    onClick={() => toggleExpandSeeker(index)}
+                    className="text-blue-500 text-sm mt-1 underline"
+                  >
+                    {isExpanded ? "View Less" : "View More"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </>
       )}
     </div>
   );
