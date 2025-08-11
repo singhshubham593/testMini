@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+ import React, { useState, useEffect } from "react";
 
 export default function JobPortal() {
   const [page, setPage] = useState("poster"); // 'poster' or 'seeker'
@@ -17,6 +17,19 @@ export default function JobPortal() {
   // Separate expand states for poster & seeker
   const [expandedPoster, setExpandedPoster] = useState({});
   const [expandedSeeker, setExpandedSeeker] = useState({});
+
+  // Load jobs from localStorage on first render
+  useEffect(() => {
+    const storedJobs = localStorage.getItem("jobsData");
+    if (storedJobs) {
+      setJobs(JSON.parse(storedJobs));
+    }
+  }, []);
+
+  // Save jobs to localStorage whenever jobs state changes
+  useEffect(() => {
+    localStorage.setItem("jobsData", JSON.stringify(jobs));
+  }, [jobs]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -43,7 +56,7 @@ export default function JobPortal() {
       setJobs(updatedJobs);
       setEditIndex(null);
     } else {
-      setJobs([...jobs, formData]);
+      setJobs([formData, ...jobs]);
     }
 
     setFormData({
@@ -74,7 +87,7 @@ export default function JobPortal() {
     <div className="bg-white min-h-screen p-6 max-w-5xl mx-auto">
       {/* Header */}
       <h1 className="text-center text-4xl font-bold bg-blue-400 bg-clip-text text-transparent mb-6">
-       Job Portal
+        Job Portal
       </h1>
 
       {/* Navigation */}
