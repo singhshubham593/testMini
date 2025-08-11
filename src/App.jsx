@@ -1,7 +1,7 @@
- import React, { useState, useEffect } from "react";
+ import React, { useState, useEffect, useRef } from "react";
 
 export default function JobPortal() {
-  const [page, setPage] = useState("poster"); // 'poster' or 'seeker'
+  const [page, setPage] = useState("poster");
   const [jobs, setJobs] = useState([]);
   const [formData, setFormData] = useState({
     role: "",
@@ -14,11 +14,12 @@ export default function JobPortal() {
   const [showForm, setShowForm] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
 
-  // Separate expand states for poster & seeker
   const [expandedPoster, setExpandedPoster] = useState({});
   const [expandedSeeker, setExpandedSeeker] = useState({});
 
-  // Load jobs from localStorage on first render
+  // Ref for focusing on first input
+  const roleInputRef = useRef(null);
+
   useEffect(() => {
     const storedJobs = localStorage.getItem("jobsData");
     if (storedJobs) {
@@ -26,10 +27,16 @@ export default function JobPortal() {
     }
   }, []);
 
-  // Save jobs to localStorage whenever jobs state changes
   useEffect(() => {
     localStorage.setItem("jobsData", JSON.stringify(jobs));
   }, [jobs]);
+
+  // Focus when form is shown
+  useEffect(() => {
+    if (showForm && roleInputRef.current) {
+      roleInputRef.current.focus();
+    }
+  }, [showForm]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -123,7 +130,17 @@ export default function JobPortal() {
             </h2>
             {!showForm && (
               <button
-                onClick={() => setShowForm(true)}
+                onClick={() => {
+                  setFormData({
+                    role: "",
+                    package: "",
+                    experience: "",
+                    location: "",
+                    description: ""
+                  });
+                  setEditIndex(null);
+                  setShowForm(true);
+                }}
                 className="bg-gradient-to-r from-yellow-400 to-blue-400 text-white px-6 py-2 rounded-full shadow-md"
               >
                 + Post a Job
@@ -146,6 +163,7 @@ export default function JobPortal() {
                 type="text"
                 name="role"
                 value={formData.role}
+                ref={roleInputRef}
                 onChange={handleChange}
                 className="w-full p-2 rounded-md bg-white shadow-sm focus:outline-none mb-1"
               />
