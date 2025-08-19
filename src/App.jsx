@@ -1,638 +1,571 @@
- import React, { createContext, useContext, useMemo, useState } from "react";
+ import React, { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
 
 /**
- * React + Tailwind CSS — Single-file Job Portal
- * Roles: Admin, Manager, Recruiter
- * Auth: Email login restricted to @company.com. Users must exist (admin-managed).
- * Admin: Add users (manager/recruiter), see all jobs & candidates.
- * Manager: Post jobs (basic details) and forward applicant data to a chosen recruiter per job.
- * Recruiter: See assigned jobs, contact candidates, and complete candidate forms.
- * Storage: In-memory via React Context (no persistence across refreshes).
+ * Single-file React Job Portal (Admin • Manager • Recruiter)
+ * - Tailwind CSS only (assumes Tailwind is set up in the host project)
+ * - Login: Email / WhatsApp (mock) / Google (mock)
+ * - Full linking: Admin → Manager → Recruiter → Candidate → Status
+ * - All data in React Context (in-memory)
+ * - Beautiful, modern UI using Tailwind utility classes
  */
 
-// ---------------------------
-// Context & In-Memory Store
-// ---------------------------
-const AppContext = createContext(null);
-const useApp = () => useContext(AppContext);
-
-function AppProvider({ children }) {
-  // Seed users — Admin is predefined; others can be added by Admin.
-  const [users, setUsers] = useState([
-    { id: 1, email: "admin@company.com", role: "admin", name: "Admin" },
-    { id: 2, email: "manager@company.com", role: "manager", name: "Manager" },
-    { id: 3, email: "recruiter@company.com", role: "recruiter", name: "Recruiter" },
-  ]);
-
-  // Jobs, Candidates
-  const [jobs, setJobs] = useState([
-    {
-      id: 1,
-      title: "Frontend Engineer",
-      location: "Remote",
-      type: "Full-time",
-      salary: "₹18–28 LPA",
-      description:
-        "Build delightful UI with React + Tailwind. Collaborate with design & backend.",
-      createdBy: 2, // manager id
-      recruiterId: 3, // shared with which recruiter
-      createdAt: new Date().toISOString(),
-    },
-  ]);
-
-  // candidates: flat list; linked via jobId
-  const [candidates, setCandidates] = useState([
-    {
-      id: 101,
-      jobId: 1,
-      name: "Ananya Sharma",
-      email: "ananya@example.com",
-      phone: "+91-98765-43210",
-      notes: "Portfolio looks strong; React + TS.",
-      status: "New",
-      referredBy: 2, // manager id
-      recruiterId: 3,
-      contacted: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ]);
-
-  const nextUserId = useMemo(() => users.reduce((m, u) => Math.max(m, u.id), 0) + 1, [users]);
-  const nextJobId = useMemo(() => jobs.reduce((m, j) => Math.max(m, j.id), 0) + 1, [jobs]);
-  const nextCandId = useMemo(
-    () => candidates.reduce((m, c) => Math.max(m, c.id), 0) + 1,
-    [candidates]
-  );
-
-  // --- Mutations ---
-  const addUser = (email, role, name) => {
-    if (!email || !role) return { ok: false, message: "Email & role required" };
-    if (!email.endsWith("@company.com"))
-      return { ok: false, message: "Only @company.com emails are allowed" };
-    const exists = users.some((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (exists) return { ok: false, message: "User already exists" };
-    const user = { id: nextUserId, email, role, name: name || email.split("@")[0] };
-    setUsers((prev) => [...prev, user]);
-    return { ok: true, user };
-  };
-
-  const addJob = (payload) => {
-    const { title, description, location, type, salary, createdBy, recruiterId } = payload || {};
-    if (!title || !description) return { ok: false, message: "Title & description are required" };
-    const job = {
-      id: nextJobId,
-      title,
-      description,
-      location: location || "—",
-      type: type || "—",
-      salary: salary || "—",
-      createdBy,
-      recruiterId: recruiterId || null,
-      createdAt: new Date().toISOString(),
-    };
-    setJobs((prev) => [job, ...prev]);
-    return { ok: true, job };
-  };
-
-  const assignRecruiterToJob = (jobId, recruiterId) => {
-    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, recruiterId } : j)));
-  };
-
-  const referApplicant = (jobId, applicant, managerId) => {
-    if (!jobId || !applicant?.name || !applicant?.email || !applicant?.phone)
-      return { ok: false, message: "Name, email & phone are required" };
-    const job = jobs.find((j) => j.id === jobId);
-    if (!job) return { ok: false, message: "Invalid job" };
-    const candidate = {
-      id: nextCandId,
-      jobId,
-      name: applicant.name,
-      email: applicant.email,
-      phone: applicant.phone,
-      notes: applicant.notes || "",
-      status: "New",
-      referredBy: managerId,
-      recruiterId: job.recruiterId || null,
-      contacted: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setCandidates((prev) => [candidate, ...prev]);
-    return { ok: true, candidate };
-  };
-
-  const updateCandidate = (id, patch) => {
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...patch, updatedAt: new Date().toISOString() } : c))
-    );
-  };
-
-  const value = {
-    users,
-    jobs,
-    candidates,
-    addUser,
-    addJob,
-    assignRecruiterToJob,
-    referApplicant,
-    updateCandidate,
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
-
-// ---------------------------
-// UI Primitives (Tailwind-only)
-// ---------------------------
-const Card = ({ title, subtitle, actions, children, className = "" }) => (
-  <div className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
-    {(title || actions) && (
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          {title && <h3 className="text-lg font-semibold text-slate-800">{title}</h3>}
-          {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
-        </div>
-        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-      </div>
-    )}
-    {children}
-  </div>
-);
-
-const Button = ({ children, variant = "primary", className = "", ...props }) => {
-  const base =
-    "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1";
-  const variants = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-300",
-    outline:
-      "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-blue-300",
-    subtle: "bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-300",
-    danger: "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-300",
-    success: "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-300",
-  };
-  return (
-    <button className={`${base} ${variants[variant]} ${className}`} {...props}>
-      {children}
-    </button>
-  );
+/* --------------------
+   Role & Dummy Auth
+   -------------------- */
+const COMPANY_DOMAIN = "company.com";
+const PREDEFINED = {
+  admin: ["admin@company.com"],
+  managers: ["manager@company.com", "manager2@company.com"],
+  recruiters: ["recruiter@company.com", "recruiter2@company.com"],
 };
 
-const Input = ({ label, hint, ...props }) => (
-  <label className="flex w-full flex-col gap-1">
-    {label && <span className="text-sm text-slate-600">{label}</span>}
-    <input
-      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-      {...props}
-    />
-    {hint && <span className="text-xs text-slate-400">{hint}</span>}
-  </label>
+const detectRole = (email) => {
+  if (!email) return null;
+  const e = email.toLowerCase().trim();
+  if (PREDEFINED.admin.includes(e)) return "admin";
+  if (PREDEFINED.managers.includes(e)) return "manager";
+  if (PREDEFINED.recruiters.includes(e)) return "recruiter";
+  if (e.endsWith(`@${COMPANY_DOMAIN}`)) return "manager"; // default to manager for same-company emails
+  return null;
+};
+
+let nextIds = { user: 10, job: 10, candidate: 100 };
+
+/* -----------------
+   Initial in-memory DB
+   ----------------- */
+const initialState = {
+  currentUser: null,
+  users: [
+    { id: 1, name: "Admin User", email: "admin@company.com", role: "admin" },
+    { id: 2, name: "Maya Kapoor", email: "manager@company.com", role: "manager" },
+    { id: 3, name: "Sahil Rao", email: "recruiter@company.com", role: "recruiter" },
+  ],
+  jobs: [
+    { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React","Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: new Date().toISOString() },
+    { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
+  ],
+  candidates: [
+    { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: new Date().toISOString(), note: "WhatsApp message" }] },
+  ],
+};
+
+/* ---------
+   Reducer
+   --------- */
+function reducer(state, action) {
+  switch (action.type) {
+    case "LOGIN":
+      return { ...state, currentUser: action.payload };
+    case "LOGOUT":
+      return { ...state, currentUser: null };
+    case "ADD_USER": {
+      const user = { id: nextIds.user++, ...action.payload };
+      return { ...state, users: [...state.users, user] };
+    }
+    case "ADD_JOB": {
+      const job = { id: nextIds.job++, createdAt: new Date().toISOString(), ...action.payload };
+      return { ...state, jobs: [job, ...state.jobs] };
+    }
+    case "ADD_CANDIDATE": {
+      const cand = { id: nextIds.candidate++, contactHistory: [], ...action.payload };
+      return { ...state, candidates: [cand, ...state.candidates] };
+    }
+    case "UPDATE_CANDIDATE": {
+      const { id, updates } = action.payload;
+      const candidates = state.candidates.map((c) => (c.id === id ? { ...c, ...updates } : c));
+      return { ...state, candidates };
+    }
+    default:
+      return state;
+  }
+}
+
+/* -------
+   Context
+   ------- */
+const AppDB = createContext(null);
+const useDB = () => useContext(AppDB);
+
+/* ------------------
+   Small UI primitives
+   ------------------ */
+const Badge = ({ children, className = "" }) => (
+  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${className}`}>{children}</span>
 );
 
-const TextArea = ({ label, rows = 4, ...props }) => (
-  <label className="flex w-full flex-col gap-1">
-    {label && <span className="text-sm text-slate-600">{label}</span>}
-    <textarea
-      rows={rows}
-      className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-      {...props}
-    />
-  </label>
+const Button = ({ children, className = "", ...rest }) => (
+  <button {...rest} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-sm ${className}`}>{children}</button>
 );
 
-const Select = ({ label, children, ...props }) => (
-  <label className="flex w-full flex-col gap-1">
-    {label && <span className="text-sm text-slate-600">{label}</span>}
-    <select
-      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-      {...props}
-    >
-      {children}
-    </select>
-  </label>
-);
-
-const Badge = ({ children, color = "slate" }) => (
-  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium border-${color}-200 bg-${color}-50 text-${color}-700`}>{children}</span>
-);
-
-const Empty = ({ title, subtitle, action }) => (
-  <div className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
-    <div className="mb-2 text-base font-semibold text-slate-700">{title}</div>
-    <div className="mb-4 text-sm">{subtitle}</div>
-    {action}
+const Card = ({ title, subtitle, right, children }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-4">
+      <div>
+        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+      </div>
+      {right && <div className="shrink-0">{right}</div>}
+    </div>
+    <div className="p-4">{children}</div>
   </div>
 );
 
-// ---------------------------
-// Auth
-// ---------------------------
-function Login({ onLogin }) {
-  const { users } = useApp();
+/* ------------------
+   Login Component
+   ------------------ */
+function Login() {
+  const { state, dispatch } = useDB();
   const [email, setEmail] = useState("");
+  const [method, setMethod] = useState("email");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!email.endsWith("@company.com")) {
-      setError("Only company emails (@company.com) are allowed.");
-      return;
-    }
-    const user = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!user) {
-      setError("No account found. Ask Admin to add you as Manager or Recruiter.");
-      return;
-    }
-    onLogin(user);
+  const handleLogin = (simulateEmail) => {
+    const e = (simulateEmail || email).trim().toLowerCase();
+    if (!e) return setError("Please enter email");
+    const role = detectRole(e);
+    if (!role) return setError("Unauthorized email — use company email or demo buttons");
+
+    // find existing user or create transient one
+    const existing = state.users.find((u) => u.email === e);
+    const user = existing || { id: nextIds.user++, name: e.split('@')[0], email: e, role };
+    dispatch({ type: 'LOGIN', payload: user });
   };
 
-  const quicks = ["admin@company.com", "manager@company.com", "recruiter@company.com"];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-emerald-50">
-      <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center p-6">
-        <div className="w-full max-w-lg">
-          <div className="mb-6 text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-800">Albireo Job Portal</h1>
-            <p className="mt-2 text-sm text-slate-600">Login with your offical company email.</p>
-          </div>
-          <Card title="Email Login">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <Input
-                label="Company Email"
-                type="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoFocus
-                required
-              />
-              {error && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
-              )}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-wrap gap-2">
-                  {quicks.map((q) => (
-                    <Button key={q} type="button" variant="outline" onClick={() => setEmail(q)} className="text-xs">
-                      {q}
-                    </Button>
-                  ))}
-                </div>
-                <Button type="submit">Submit</Button>
-              </div>
-            </form>
-          </Card>
+    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="w-full max-w-xl">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-slate-900 text-white grid place-content-center text-xl">💼</div>
+          <h1 className="text-2xl font-bold text-slate-900">Company Job Portal</h1>
+          <p className="text-sm text-slate-500 mt-1">Admin • Manager • Recruiter — demo auth</p>
         </div>
+
+        <Card title="Sign in" subtitle="Email / WhatsApp (mock) / Google (mock)">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <Button onClick={() => setMethod('email')} className={`${method==='email' ? 'bg-slate-900 text-white' : 'border'}`}>Email</Button>
+            <Button onClick={() => setMethod('whatsapp')} className={`${method==='whatsapp' ? 'bg-green-500 text-white' : 'border'}`}>WhatsApp</Button>
+            <Button onClick={() => setMethod('google')} className={`${method==='google' ? 'bg-red-500 text-white' : 'border'}`}>Google</Button>
+          </div>
+
+          <form onSubmit={(e)=>{ e.preventDefault(); handleLogin(); }} className="space-y-3">
+            <label className="block text-sm">
+              <div className="flex items-center gap-1 font-medium text-slate-700">{method==='whatsapp' ? 'WhatsApp-linked Email' : 'Email'}</div>
+              <input value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="you@company.com" />
+            </label>
+            {error && <div className="text-xs text-rose-600">{error}</div>}
+            <div className="flex gap-3">
+              <Button type="submit" className="bg-slate-900 text-white">Sign in</Button>
+              <Button type="button" className="border" onClick={() => handleLogin('admin@company.com')}>Demo Admin</Button>
+              <Button type="button" className="border" onClick={() => handleLogin('manager@company.com')}>Demo Manager</Button>
+              <Button type="button" className="border" onClick={() => handleLogin('recruiter@company.com')}>Demo Recruiter</Button>
+            </div>
+          </form>
+        </Card>
       </div>
     </div>
   );
 }
 
-// ---------------------------
-// Dashboards
-// ---------------------------
-function AdminDashboard() {
-  const { users, addUser, jobs, candidates } = useApp();
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("manager");
-  const [msg, setMsg] = useState("");
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    const { ok, message } = addUser(email.trim(), role, name.trim());
-    setMsg(ok ? "User added" : message);
-    if (ok) {
-      setEmail("");
-      setName("");
-      setRole("manager");
-    }
-  };
-
+/* ------------------
+   App Shell
+   ------------------ */
+function AppShell({ children }) {
+  const { state, dispatch } = useDB();
+  const user = state.currentUser;
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Card title="Add User" subtitle="Create Manager or Recruiter accounts" className="lg:col-span-1">
-        <form onSubmit={handleAdd} className="flex flex-col gap-4">
-          <Input label="Name" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="Company Email" type="email" placeholder="user@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Select label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="manager">Manager</option>
-            <option value="recruiter">Recruiter</option>
-          </Select>
-          {msg && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{msg}</div>
-          )}
-          <div className="flex justify-end"><Button type="submit">Add</Button></div>
-        </form>
-      </Card>
-
-      <Card title="Users" className="lg:col-span-2">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {users.map((u) => (
-            <div key={u.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-800">{u.name} <span className="font-normal text-slate-500">({u.email})</span></div>
-                <div className="text-xs text-slate-500">ID: {u.id}</div>
-              </div>
-              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 uppercase">{u.role}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card title="All Jobs" className="lg:col-span-3">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {jobs.map((j) => (
-            <JobCard key={j.id} job={j} adminView />
-          ))}
-        </div>
-        {jobs.length === 0 && <Empty title="No jobs yet" subtitle="Managers can post jobs from their dashboard" />}
-      </Card>
-
-      <Card title="All Candidates" className="lg:col-span-3">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {candidates.map((c) => (
-            <CandidateCard key={c.id} candidate={c} />
-          ))}
-        </div>
-        {candidates.length === 0 && <Empty title="No candidates yet" subtitle="Managers can refer applicants; Recruiters complete profiles" />}
-      </Card>
-    </div>
-  );
-}
-
-function ManagerDashboard({ currentUser }) {
-  const { jobs, addJob, users, assignRecruiterToJob, referApplicant, candidates } = useApp();
-  const [form, setForm] = useState({ title: "", location: "", type: "Full-time", salary: "", description: "", recruiterId: "" });
-  const [app, setApp] = useState({ jobId: "", name: "", email: "", phone: "", notes: "" });
-  const [msg, setMsg] = useState("");
-
-  const recruiters = users.filter((u) => u.role === "recruiter");
-  const myJobs = jobs.filter((j) => j.createdBy === currentUser.id);
-  const myCandidates = candidates.filter((c) => c.referredBy === currentUser.id);
-
-  const handlePost = (e) => {
-    e.preventDefault();
-    const { ok, message, job } = addJob({ ...form, createdBy: currentUser.id, recruiterId: form.recruiterId ? Number(form.recruiterId) : null });
-    setMsg(ok ? "Job posted" : message);
-    if (ok) setForm({ title: "", location: "", type: "Full-time", salary: "", description: "", recruiterId: "" });
-  };
-
-  const handleAssign = (jobId, recruiterId) => assignRecruiterToJob(jobId, Number(recruiterId));
-
-  const handleRefer = (e) => {
-    e.preventDefault();
-    const { ok, message } = referApplicant(Number(app.jobId), app, currentUser.id);
-    setMsg(ok ? "Applicant shared with recruiter" : message);
-    if (ok) setApp({ jobId: "", name: "", email: "", phone: "", notes: "" });
-  };
-
-  return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Card title="Post a Job" subtitle="Basic details" className="lg:col-span-1">
-        <form onSubmit={handlePost} className="flex flex-col gap-3">
-          <Input label="Title" placeholder="e.g., React Developer" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Location" placeholder="e.g., Bengaluru / Remote" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-            <Select label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-              <option>Full-time</option>
-              <option>Part-time</option>
-              <option>Contract</option>
-              <option>Internship</option>
-            </Select>
-          </div>
-          <Input label="Salary Range" placeholder="₹ — LPA" value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} />
-          <TextArea label="Description" rows={5} placeholder="Responsibilities, stack, perks…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
-          <Select label="Share with Recruiter" value={form.recruiterId} onChange={(e) => setForm({ ...form, recruiterId: e.target.value })}>
-            <option value="">— None —</option>
-            {recruiters.map((r) => (
-              <option key={r.id} value={r.id}>{r.name} ({r.email})</option>
-            ))}
-          </Select>
-          {msg && <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{msg}</div>}
-          <div className="flex justify-end"><Button type="submit">Post Job</Button></div>
-        </form>
-      </Card>
-
-      <Card title="Your Jobs" className="lg:col-span-2">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {myJobs.map((j) => (
-            <div key={j.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="mb-1 text-base font-semibold text-slate-800">{j.title}</div>
-              <div className="text-xs text-slate-600">{j.location || "—"} • {j.type || "—"} • {j.salary || "—"}</div>
-              <div className="mt-2 line-clamp-3 text-sm text-slate-700">{j.description}</div>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                <span>Shared with: {j.recruiterId ? users.find((u) => u.id === j.recruiterId)?.name : "—"}</span>
-                <span>{new Date(j.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Select value={j.recruiterId || ""} onChange={(e) => handleAssign(j.id, e.target.value)}>
-                  <option value="">Assign recruiter…</option>
-                  {recruiters.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-          ))}
-        </div>
-        {myJobs.length === 0 && <Empty title="No jobs yet" subtitle="Post your first job to get started" />}
-      </Card>
-
-      <Card title="Refer Applicant" subtitle="Forward application to the job's recruiter" className="lg:col-span-3">
-        <form onSubmit={handleRefer} className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Select label="Job" value={app.jobId} onChange={(e) => setApp({ ...app, jobId: e.target.value })}>
-            <option value="">Select a job…</option>
-            {myJobs.map((j) => (
-              <option key={j.id} value={j.id}>{j.title}</option>
-            ))}
-          </Select>
-          <Input label="Applicant Name" placeholder="e.g., Rahul Verma" value={app.name} onChange={(e) => setApp({ ...app, name: e.target.value })} required />
-          <Input label="Email" type="email" placeholder="candidate@example.com" value={app.email} onChange={(e) => setApp({ ...app, email: e.target.value })} required />
-          <Input label="Phone" placeholder="+91-9xxxxxxxxx" value={app.phone} onChange={(e) => setApp({ ...app, phone: e.target.value })} required />
-          <TextArea label="Notes" rows={3} placeholder="Short summary, source, etc." value={app.notes} onChange={(e) => setApp({ ...app, notes: e.target.value })} />
-          <div className="flex items-end justify-end md:col-span-3"><Button type="submit" variant="success">Share with Recruiter</Button></div>
-        </form>
-
-        <div className="mt-6">
-          <div className="mb-2 text-sm font-semibold text-slate-800">Applicants you've referred</div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {myCandidates.map((c) => (
-              <CandidateCard key={c.id} candidate={c} />
-            ))}
-          </div>
-          {myCandidates.length === 0 && <Empty title="No applicants shared yet" subtitle="Use the form above to share candidates with recruiters" />}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function RecruiterDashboard({ currentUser }) {
-  const { jobs, candidates, updateCandidate } = useApp();
-  const myJobs = jobs.filter((j) => j.recruiterId === currentUser.id);
-  const myCandidates = candidates.filter((c) => c.recruiterId === currentUser.id);
-
-  const [active, setActive] = useState(myCandidates[0]?.id || null);
-  const activeCand = myCandidates.find((c) => c.id === active) || null;
-
-  const setCand = (patch) => activeCand && updateCandidate(activeCand.id, patch);
-
-  return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Card title="Assigned Jobs" className="lg:col-span-1">
-        {myJobs.length === 0 && <Empty title="No jobs assigned" subtitle="Managers will share jobs with you" />}
-        <div className="flex flex-col gap-2">
-          {myJobs.map((j) => (
-            <div key={j.id} className="rounded-xl border border-slate-200 bg-white p-3">
-              <div className="text-sm font-semibold text-slate-800">{j.title}</div>
-              <div className="text-xs text-slate-600">{j.location || "—"} • {j.type || "—"} • {j.salary || "—"}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card title="Referred Candidates" className="lg:col-span-2">
-        {myCandidates.length === 0 && <Empty title="No candidates yet" subtitle="Managers will refer applicants to your assigned jobs" />}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <div className="flex flex-col gap-2">
-              {myCandidates.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActive(c.id)}
-                  className={`rounded-xl border px-3 py-2 text-left text-sm transition ${active === c.id ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}
-                >
-                  <div className="font-semibold text-slate-800">{c.name}</div>
-                  <div className="text-xs text-slate-600">{jobs.find((j) => j.id === c.jobId)?.title || "—"}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            {activeCand ? (
-              <div className="grid grid-cols-1 gap-3">
-                <div className="text-base font-semibold text-slate-800">{activeCand.name}</div>
-                <div className="text-xs text-slate-600">{activeCand.email} • {activeCand.phone}</div>
-                <Select label="Status" value={activeCand.status} onChange={(e) => setCand({ status: e.target.value })}>
-                  <option>New</option>
-                  <option>Contacted</option>
-                  <option>Interview Scheduled</option>
-                  <option>Rejected</option>
-                  <option>Offer</option>
-                </Select>
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={activeCand.contacted} onChange={(e) => setCand({ contacted: e.target.checked, status: e.target.checked ? "Contacted" : activeCand.status })} />
-                  Candidate contacted
-                </label>
-                <TextArea label="Notes" rows={5} value={activeCand.notes} onChange={(e) => setCand({ notes: e.target.value })} placeholder="Call summary, feedback, next steps…" />
-                <div className="text-right text-xs text-slate-500">Last updated {new Date(activeCand.updatedAt).toLocaleString()}</div>
-              </div>
-            ) : (
-              <Empty title="Select a candidate" subtitle="Pick a candidate from the left list to view & edit details" />
-            )}
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-// ---------------------------
-// Small display components
-// ---------------------------
-const JobCard = ({ job, adminView = false }) => {
-  const { users } = useApp();
-  const manager = users.find((u) => u.id === job.createdBy);
-  // const recruiter = job.recruiterId ? users.find((u) => u.id === job.recruiterId) : null;
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="mb-1 text-base font-semibold text-slate-800">{job.title}</div>
-      <div className="text-xs text-slate-600">{job.location || "—"} • {job.type || "—"} • {job.salary || "—"}</div>
-      <div className="mt-2 line-clamp-3 text-sm text-slate-700">{job.description}</div>
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>Manager: {manager?.name || "—"}</span>
-        {/* <span>Recruiter: {recruiter?.name || "—"}</span> */}
-      </div>
-      {adminView && <div className="mt-1 text-[11px] text-slate-400">{new Date(job.createdAt).toLocaleString()}</div>}
-    </div>
-  );
-};
-
-const CandidateCard = ({ candidate }) => {
-  const { jobs, users } = useApp();
-  const job = jobs.find((j) => j.id === candidate.jobId);
-  const recruiter = candidate.recruiterId ? users.find((u) => u.id === candidate.recruiterId) : null;
-  const manager = users.find((u) => u.id === candidate.referredBy);
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-sm font-semibold text-slate-800">{candidate.name}</div>
-          <div className="text-xs text-slate-600">{candidate.email} • {candidate.phone}</div>
-        </div>
-        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${candidate.status === "Offer" ? "bg-emerald-100 text-emerald-700" : candidate.status === "Rejected" ? "bg-rose-100 text-rose-700" : candidate.status === "Interview Scheduled" ? "bg-indigo-100 text-indigo-700" : candidate.status === "Contacted" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{candidate.status}</span>
-      </div>
-      <div className="mt-2 text-xs text-slate-600">Job: {job?.title || "—"}</div>
-      <div className="mt-2 text-xs text-slate-600">Recruiter: {recruiter?.name || "—"} • Referred by: {manager?.name || "—"}</div>
-      {candidate.notes && <div className="mt-2 text-sm text-slate-700">{candidate.notes}</div>}
-      <div className="mt-2 text-[11px] text-slate-400">{new Date(candidate.createdAt).toLocaleString()}</div>
-    </div>
-  );
-};
-
-// ---------------------------
-// App Shell
-// ---------------------------
-function Shell({ currentUser, onLogout, children }) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-emerald-50">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+    <div className="min-h-screen bg-slate-50">
+      <header className="sticky top-0 z-20 bg-white border-b border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow">
-              <span className="text-sm font-bold">SS</span>
-            </div>
+            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white grid place-content-center">💼</div>
             <div>
-              <div className="text-sm font-semibold text-slate-800">Shubham Singh</div>
-              {/* <div className="text-xs text-slate-500">Admin • Manager • Recruiter</div> */}
+              <p className="text-sm font-semibold text-slate-900">Company Job Portal</p>
+              <p className="text-xs text-slate-500">{user?.name || 'Guest'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm sm:inline">
-              {currentUser.email}
-            </span>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase text-emerald-700">
-              {currentUser.role}
-            </span>
-            <Button variant="outline" onClick={onLogout}>Logout</Button>
+            <span className="text-xs text-slate-600">Role: <span className="font-semibold">{user?.role}</span></span>
+            {user && <button onClick={()=>dispatch({type:'LOGOUT'})} className="rounded-lg border px-3 py-2 text-sm">Logout</button>}
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl p-6">{children}</main>
-      <footer className="mx-auto max-w-7xl p-6 pb-10 text-center text-xs text-slate-500">React Hooks • Context • Tailwind CSS — In-memory demo</footer>
+      <div className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
+        {children}
+      </div>
     </div>
   );
 }
 
-// ---------------------------
-// Root App
-// ---------------------------
-export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+/* ------------------
+   Sidebar Component
+   ------------------ */
+const Sidebar = ({ items }) => (
+  <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm h-fit">
+    <div className="px-2 pb-1">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Dashboard</p>
+    </div>
+    <nav className="mt-1 space-y-1">
+      {items.map((it) => (
+        <button key={it.label} onClick={it.onClick} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium flex items-center justify-between ${it.active ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
+          <span className="flex items-center gap-2">{it.icon} {it.label}</span>
+          {!!it.count && <span className="text-xs">{it.count}</span>}
+        </button>
+      ))}
+  </nav>
+  </aside>
+);
+
+/* ------------------
+   Admin View
+   ------------------ */
+function AdminView() {
+  const { state, dispatch } = useDB();
+  const [tab, setTab] = useState('overview');
+  const [form, setForm] = useState({ name:'', email:'', role:'manager' });
+
+  const managers = state.users.filter(u=>u.role==='manager');
+  const recruiters = state.users.filter(u=>u.role==='recruiter');
+
+  const addUser = (e)=>{ e.preventDefault(); if(!form.name||!form.email) return; dispatch({type:'ADD_USER', payload:form}); setForm({name:'',email:'',role:'manager'}); }
+
+  const ManagerDetail = ({manager})=>{
+    const jobs = state.jobs.filter(j=>j.createdBy===manager.id);
+    return (
+      <div>
+        <h4 className="text-sm font-semibold">Jobs by {manager.name}</h4>
+        <div className="mt-3 space-y-3">
+          {jobs.length===0 && <p className="text-sm text-slate-500">No jobs posted.</p>}
+          {jobs.map(j=>{
+            const candidates = state.candidates.filter(c=>c.appliedForJob===j.id);
+            return (
+              <div key={j.id} className="rounded-lg border p-3 bg-slate-50">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold">{j.title}</p>
+                    <p className="text-xs text-slate-500">{j.location} • {j.salary}</p>
+                  </div>
+                  <div className="text-xs text-slate-600">{candidates.length} applicants</div>
+                </div>
+                <div className="mt-2">
+                  {candidates.map(c=> (
+                    <div key={c.id} className="flex items-center justify-between mt-2">
+                      <div>
+                        <p className="text-sm font-medium">{c.name}</p>
+                        <p className="text-xs text-slate-500">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name || '—'}</p>
+                      </div>
+                      <Badge className="bg-slate-100 text-slate-700">{c.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const RecruiterDetail = ({recruiter})=>{
+    const referred = state.candidates.filter(c=>c.referredBy===recruiter.id);
+    return (
+      <div>
+        <h4 className="text-sm font-semibold">Referrals by {recruiter.name}</h4>
+        <div className="mt-2 space-y-2">
+          {referred.length===0 && <p className="text-sm text-slate-500">No referrals yet.</p>}
+          {referred.map(c=> (
+            <div key={c.id} className="rounded-lg border p-3 bg-slate-50 flex items-start justify-between">
+              <div>
+                <p className="font-medium">{c.name}</p>
+                <p className="text-xs text-slate-500">Applied: {state.jobs.find(j=>j.id===c.appliedForJob)?.title || '—'}</p>
+              </div>
+              <div className="text-xs text-slate-600">{c.status}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <AppProvider>
-      {!currentUser ? (
-        <Login onLogin={setCurrentUser} />
-      ) : (
-        <Shell currentUser={currentUser} onLogout={() => setCurrentUser(null)}>
-          {currentUser.role === "admin" && <AdminDashboard />}
-          {currentUser.role === "manager" && <ManagerDashboard currentUser={currentUser} />}
-          {currentUser.role === "recruiter" && <RecruiterDashboard currentUser={currentUser} />}
-        </Shell>
-      )}
-    </AppProvider>
+    <AppShell>
+      <Sidebar items={[
+        { label:'Overview', icon:'📊', active: tab==='overview', onClick:()=>setTab('overview') },
+        { label:'Add Manager / Recruiter', icon:'➕', active: tab==='add', onClick:()=>setTab('add') },
+        { label:`Total Managers`, icon:'👥', active: tab==='managers', onClick:()=>setTab('managers'), count: managers.length },
+        { label:`Total Recruiters`, icon:'🧑‍💼', active: tab==='recruiters', onClick:()=>setTab('recruiters'), count: recruiters.length },
+      ]} />
+
+      <main>
+        {tab==='overview' && (
+          <div className="space-y-6">
+            <Card title="Platform Summary">
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="rounded-lg border p-4 bg-slate-50 text-center">
+                  <p className="text-xs text-slate-500">Managers</p>
+                  <p className="text-xl font-semibold">{managers.length}</p>
+                </div>
+                <div className="rounded-lg border p-4 bg-slate-50 text-center">
+                  <p className="text-xs text-slate-500">Recruiters</p>
+                  <p className="text-xl font-semibold">{recruiters.length}</p>
+                </div>
+                <div className="rounded-lg border p-4 bg-slate-50 text-center">
+                  <p className="text-xs text-slate-500">Open Jobs</p>
+                  <p className="text-xl font-semibold">{state.jobs.length}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card title="Recent Jobs" subtitle="Latest posts">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {state.jobs.map(j => (
+                  <div key={j.id} className="rounded-lg border p-3">
+                    <p className="font-semibold">{j.title}</p>
+                    <p className="text-xs text-slate-500">{j.location} • {j.salary}</p>
+                    <p className="text-xs mt-2 text-slate-600">Posted by: {state.users.find(u=>u.id===j.createdBy)?.name}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {tab==='add' && (
+          <Card title="Add User">
+            <form onSubmit={addUser} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="block text-sm"><div className="font-medium">Full name</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} /></label>
+              <label className="block text-sm"><div className="font-medium">Email</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} /></label>
+              <label className="block text-sm"><div className="font-medium">Role</div><select className="mt-1 w-full rounded-lg border px-3 py-2" value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})}><option value="manager">Manager</option><option value="recruiter">Recruiter</option></select></label>
+              <div className="sm:col-span-2 flex gap-3 items-center"><Button type="submit" className="bg-slate-900 text-white">Create</Button><Button type="button" className="border" onClick={()=>setForm({name:'',email:'',role:'manager'})}>Clear</Button></div>
+            </form>
+          </Card>
+        )}
+
+        {tab==='managers' && (
+          <Card title={`Managers (${managers.length})`} subtitle="Click to inspect each manager">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {managers.map(m => (
+                <details key={m.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{m.name}</p><p className="text-xs text-slate-500">{m.email}</p></div><div className="text-xs text-slate-600">View</div></summary><div className="mt-3"><ManagerDetail manager={m} /></div></details>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {tab==='recruiters' && (
+          <Card title={`Recruiters (${recruiters.length})`} subtitle="Click to inspect each recruiter">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {recruiters.map(r => (
+                <details key={r.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{r.name}</p><p className="text-xs text-slate-500">{r.email}</p></div><div className="text-xs text-slate-600">View</div></summary><div className="mt-3"><RecruiterDetail recruiter={r} /></div></details>
+              ))}
+            </div>
+          </Card>
+        )}
+      </main>
+    </AppShell>
+  );
+}
+
+/* ------------------
+   Manager View
+   ------------------ */
+function ManagerView() {
+  const { state, dispatch } = useDB();
+  const user = state.currentUser;
+  const myJobs = state.jobs.filter(j => j.createdBy === user.id);
+  const [tab, setTab] = useState('jobs');
+  const [form, setForm] = useState({ title:'', description:'', skills:'', salary:'', location:'' });
+
+  const postJob = (e)=>{ e.preventDefault(); if(!form.title) return; const payload = {...form, skills: form.skills.split(',').map(s=>s.trim()).filter(Boolean), createdBy: user.id }; dispatch({type:'ADD_JOB', payload}); setForm({ title:'', description:'', skills:'', salary:'', location:'' }); setTab('jobs'); }
+
+  return (
+    <AppShell>
+      <Sidebar items={[
+        { label:'Profile', icon:'👤', active: tab==='profile', onClick:()=>setTab('profile') },
+        { label:'Create New Job Post', icon:'➕', active: tab==='create', onClick:()=>setTab('create') },
+        { label:'Total Jobs Posted', icon:'📋', active: tab==='jobs', onClick:()=>setTab('jobs'), count: myJobs.length },
+        { label:'Applications per Job', icon:'🧾', active: tab==='apps', onClick:()=>setTab('apps') },
+      ]} />
+
+      <main>
+        {tab==='profile' && <Card title="Profile" subtitle={user.name}><p className="text-sm">Email: {user.email}</p></Card>}
+
+        {tab==='create' && (
+          <Card title="Create Job" subtitle="Fill basic details">
+            <form onSubmit={postJob} className="grid grid-cols-1 gap-3">
+              <label className="block text-sm"><div className="font-medium">Title</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.title} onChange={(e)=>setForm({...form,title:e.target.value})} /></label>
+              <label className="block text-sm"><div className="font-medium">Description</div><textarea className="mt-1 w-full rounded-lg border px-3 py-2" value={form.description} onChange={(e)=>setForm({...form,description:e.target.value})} /></label>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className="block text-sm"><div className="font-medium">Skills (comma)</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.skills} onChange={(e)=>setForm({...form,skills:e.target.value})} /></label>
+                <label className="block text-sm"><div className="font-medium">Salary</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.salary} onChange={(e)=>setForm({...form,salary:e.target.value})} /></label>
+                <label className="block text-sm sm:col-span-2"><div className="font-medium">Location</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.location} onChange={(e)=>setForm({...form,location:e.target.value})} /></label>
+              </div>
+              <div className="flex gap-3"><Button type="submit" className="bg-slate-900 text-white">Publish Job</Button><Button type="button" className="border" onClick={()=>setForm({ title:'', description:'', skills:'', salary:'', location:'' })}>Clear</Button></div>
+            </form>
+          </Card>
+        )}
+
+        {tab==='jobs' && (
+          <Card title={`My Jobs (${myJobs.length})`} subtitle="Jobs posted by you">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {myJobs.map(j=> (
+                <div key={j.id} className="rounded-lg border p-3">
+                  <p className="font-semibold">{j.title}</p>
+                  <p className="text-xs text-slate-500">{j.location} • {j.salary}</p>
+                  <p className="text-sm text-slate-600 mt-2 line-clamp-2">{j.description}</p>
+                  <div className="text-xs text-slate-600 mt-2">Applicants: {state.candidates.filter(c=>c.appliedForJob===j.id).length}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {tab==='apps' && (
+          <Card title="Applications" subtitle="Applications for your jobs">
+            <div className="space-y-3">
+              {state.candidates.filter(c=> myJobs.some(j=>j.id===c.appliedForJob)).map(c=> (
+                <div key={c.id} className="rounded-lg border p-3 bg-slate-50 flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold">{c.name}</p>
+                    <p className="text-xs text-slate-500">Applied for: {state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
+                    <p className="text-xs text-slate-600">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name}</p>
+                  </div>
+                  <div className="text-xs text-slate-600">{c.status}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </main>
+    </AppShell>
+  );
+}
+
+/* ------------------
+   Recruiter View
+   ------------------ */
+function RecruiterView(){
+  const { state, dispatch } = useDB();
+  const user = state.currentUser;
+  const myReferrals = state.candidates.filter(c=>c.referredBy===user.id);
+  const [selectedJob, setSelectedJob] = useState(state.jobs[0]?.id || "");
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [form, setForm] = useState({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob });
+
+  useEffect(()=>{ setForm(f=>({...f, appliedForJob: selectedJob})); },[selectedJob]);
+
+  const refer = (e)=>{ e.preventDefault(); if(!form.name || !form.email || !form.appliedForJob) return; dispatch({type:'ADD_CANDIDATE', payload:{ ...form, referredBy: user.id, status: 'referred' }}); setForm({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob }); }
+
+  const openCandidate = (c)=>{ setSelectedCandidate(c); }
+  const updateStatus = (id, status, note='')=>{ const candidate = state.candidates.find(x=>x.id===id); const ch = (candidate.contactHistory||[]).concat([{date:new Date().toISOString(), note}]); dispatch({type:'UPDATE_CANDIDATE', payload:{ id, updates:{ status, contactHistory: ch }}}); if(selectedCandidate?.id===id) setSelectedCandidate({...selectedCandidate, status, contactHistory: ch}); }
+
+  return (
+    <AppShell>
+      <Sidebar items={[
+        { label:'Refer Candidate', icon:'➕', active:true, onClick:()=>{} },
+      ]} />
+
+      <main>
+        <div className="space-y-6">
+          <Card title="Refer Candidate" subtitle="Select job and provide candidate details">
+            <form onSubmit={refer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="block text-sm"><div className="font-medium">Select Job</div><select className="mt-1 w-full rounded-lg border px-3 py-2" value={selectedJob} onChange={(e)=>setSelectedJob(Number(e.target.value))}>{state.jobs.map(j=> <option key={j.id} value={j.id}>#{j.id} — {j.title}</option>)}</select></label>
+              <label className="block text-sm"><div className="font-medium">Full name</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.name} onChange={(e)=>setForm({...form, name:e.target.value})} /></label>
+              <label className="block text-sm"><div className="font-medium">Email</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.email} onChange={(e)=>setForm({...form, email:e.target.value})} /></label>
+              <label className="block text-sm"><div className="font-medium">Phone</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.phone} onChange={(e)=>setForm({...form, phone:e.target.value})} /></label>
+              <label className="block text-sm"><div className="font-medium">Resume URL</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.resume} onChange={(e)=>setForm({...form, resume:e.target.value})} /></label>
+              <label className="block text-sm sm:col-span-2"><div className="font-medium">Notes</div><textarea className="mt-1 w-full rounded-lg border px-3 py-2" value={form.notes} onChange={(e)=>setForm({...form, notes:e.target.value})} /></label>
+              <div className="sm:col-span-2 flex gap-3"><Button type="submit" className="bg-slate-900 text-white">Refer</Button><Button type="button" className="border" onClick={()=>setForm({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob })}>Clear</Button></div>
+            </form>
+          </Card>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card title="My Referrals" subtitle="Click a candidate to view details">
+              <div className="space-y-2">
+                {myReferrals.length===0 && <p className="text-sm text-slate-500">No referrals yet.</p>}
+                {myReferrals.map(c=> (
+                  <button key={c.id} onClick={()=>openCandidate(c)} className="w-full text-left rounded-lg p-3 border hover:bg-slate-50 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{c.name}</p>
+                      <p className="text-xs text-slate-500">{state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
+                    </div>
+                    <div className="text-xs text-slate-600">{c.status}</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            <Card title="Candidate Details" subtitle="Update status & add contact notes">
+              {selectedCandidate ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-semibold">{selectedCandidate.name}</p>
+                    <p className="text-xs text-slate-500">{selectedCandidate.email} • {selectedCandidate.phone}</p>
+                    <p className="text-xs text-slate-500">Applied for: {state.jobs.find(j=>j.id===selectedCandidate.appliedForJob)?.title}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium">Status</p>
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      {['referred','contacted','shortlisted','rejected','hired'].map(s=> (
+                        <button key={s} onClick={()=>updateStatus(selectedCandidate.id, s, `Marked ${s}`)} className={`rounded-md px-3 py-1 text-sm ${selectedCandidate.status===s ? 'bg-slate-900 text-white' : 'border'}`}>{s}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium">Notes</p>
+                    <p className="text-sm text-slate-600 mt-1">{selectedCandidate.notes || '—'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium">Contact History</p>
+                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                      {(selectedCandidate.contactHistory||[]).map((h,i)=> (
+                        <li key={i}>• {new Date(h.date).toLocaleString()}: {h.note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Select a candidate from the list to view details.</p>
+              )}
+            </Card>
+          </div>
+        </div>
+      </main>
+    </AppShell>
+  );
+}
+
+/* --------
+   Router
+   -------- */
+function Router(){
+  const { state } = useDB();
+  if(!state.currentUser) return <Login />;
+  if(state.currentUser.role==='admin') return <AdminView />;
+  if(state.currentUser.role==='manager') return <ManagerView />;
+  if(state.currentUser.role==='recruiter') return <RecruiterView />;
+  return <div className="p-10">Unknown role</div>;
+}
+
+/* -----
+   App
+   ----- */
+export default function App(){
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  useEffect(()=>{
+    if(!state.currentUser) return;
+    const existing = state.users.find(u=>u.email===state.currentUser.email);
+    if(existing) dispatch({type:'LOGIN', payload:existing});
+  }, [state.currentUser?.email]);
+
+  const value = useMemo(()=>({ state, dispatch }), [state, dispatch]);
+
+  return (
+    <AppDB.Provider value={value}>
+      <Router />
+    </AppDB.Provider>
   );
 }
