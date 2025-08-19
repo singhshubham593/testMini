@@ -44,6 +44,9 @@ const initialState = {
   jobs: [
     { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React","Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: new Date().toISOString() },
     { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
+    { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
+    { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
+    { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() }
   ],
   candidates: [
     { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: new Date().toISOString(), note: "WhatsApp message" }] },
@@ -270,7 +273,7 @@ function AdminView() {
     const referred = state.candidates.filter(c=>c.referredBy===recruiter.id);
     return (
       <div>
-        <h4 className="text-sm font-semibold text-blue-700">Referrals by {recruiter.name}</h4>
+        <h4 className="text-sm font-semibold text-blue-700">Referrals by Manager Name</h4>
         <div className="mt-2 space-y-2">
           {referred.length===0 && <p className="text-sm text-blue-500">No referrals yet.</p>}
           {referred.map(c=> (
