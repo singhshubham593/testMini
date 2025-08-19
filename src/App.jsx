@@ -99,11 +99,11 @@ const Button = ({ children, className = "", ...rest }) => (
 );
 
 const Card = ({ title, subtitle, right, children }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-4">
+  <div className="rounded-2xl border border-yellow-200 bg-white shadow-sm">
+    <div className="flex items-start justify-between gap-4 border-b border-yellow-100 p-4">
       <div>
-        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        <h3 className="text-base font-semibold text-blue-500">{title}</h3>
+        {subtitle && <p className="text-xs text-blue-500 mt-0.5">{subtitle}</p>}
       </div>
       {right && <div className="shrink-0">{right}</div>}
     </div>
@@ -133,29 +133,29 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-yellow-50 to-blue-50 p-6">
       <div className="w-full max-w-xl">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-slate-900 text-white grid place-content-center text-xl">💼</div>
-          <h1 className="text-2xl font-bold text-slate-900">Company Job Portal</h1>
-          <p className="text-sm text-slate-500 mt-1">Admin • Manager • Recruiter — demo auth</p>
+          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-blue-600 text-white grid place-content-center text-xl">💼</div>
+          <h1 className="text-2xl font-bold text-blue-800">Company Job Portal</h1>
+          <p className="text-sm text-blue-500 mt-1">Admin • Manager • Recruiter — demo auth</p>
         </div>
 
         <Card title="Sign in" subtitle="Email / WhatsApp (mock) / Google (mock)">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <Button onClick={() => setMethod('email')} className={`${method==='email' ? 'bg-slate-900 text-white' : 'border'}`}>Email</Button>
+            <Button onClick={() => setMethod('email')} className={`${method==='email' ? 'bg-blue-600 text-white' : 'border'}`}>Email</Button>
             <Button onClick={() => setMethod('whatsapp')} className={`${method==='whatsapp' ? 'bg-green-500 text-white' : 'border'}`}>WhatsApp</Button>
             <Button onClick={() => setMethod('google')} className={`${method==='google' ? 'bg-red-500 text-white' : 'border'}`}>Google</Button>
           </div>
 
           <form onSubmit={(e)=>{ e.preventDefault(); handleLogin(); }} className="space-y-3">
             <label className="block text-sm">
-              <div className="flex items-center gap-1 font-medium text-slate-700">{method==='whatsapp' ? 'WhatsApp-linked Email' : 'Email'}</div>
-              <input value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" placeholder="you@company.com" />
+              <div className="flex items-center gap-1 font-medium text-blue-700">{method==='whatsapp' ? 'WhatsApp-linked Email' : 'Email'}</div>
+              <input value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-yellow-200 px-3 py-2" placeholder="you@company.com" />
             </label>
             {error && <div className="text-xs text-rose-600">{error}</div>}
             <div className="flex gap-3">
-              <Button type="submit" className="bg-slate-900 text-white">Sign in</Button>
+              <Button type="submit" className="bg-blue-600 text-white">Sign in</Button>
               <Button type="button" className="border" onClick={() => handleLogin('admin@company.com')}>Demo Admin</Button>
               <Button type="button" className="border" onClick={() => handleLogin('manager@company.com')}>Demo Manager</Button>
               <Button type="button" className="border" onClick={() => handleLogin('recruiter@company.com')}>Demo Recruiter</Button>
@@ -174,23 +174,23 @@ function AppShell({ children }) {
   const { state, dispatch } = useDB();
   const user = state.currentUser;
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-20 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-yellow-50">
+      <header className="sticky top-0 z-20 bg-white border-b border-yellow-200">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-slate-900 text-white grid place-content-center">💼</div>
+            <div className="h-9 w-9 rounded-xl bg-blue-600 text-white grid place-content-center">💼</div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Company Job Portal</p>
-              <p className="text-xs text-slate-500">{user?.name || 'Guest'}</p>
+              <p className="text-sm font-semibold text-blue-800">Albireo Work</p>
+              <p className="text-xs text-blue-500">{user?.name || 'Guest'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-600">Role: <span className="font-semibold">{user?.role}</span></span>
+            <span className="text-xs text-blue-600">Role: <span className="font-semibold">{user?.role}</span></span>
             {user && <button onClick={()=>dispatch({type:'LOGOUT'})} className="rounded-lg border px-3 py-2 text-sm">Logout</button>}
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
+      <div className="mx-auto max-w-7xl px-4 py-6 flex gap-6 items-start">
         {children}
       </div>
     </div>
@@ -201,13 +201,13 @@ function AppShell({ children }) {
    Sidebar Component
    ------------------ */
 const Sidebar = ({ items }) => (
-  <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm h-fit">
+  <aside className="rounded-2xl border border-yellow-200 bg-white p-3 shadow-sm h-fit w-64 shrink-0">
     <div className="px-2 pb-1">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Dashboard</p>
+      <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Dashboard</p>
     </div>
     <nav className="mt-1 space-y-1">
       {items.map((it) => (
-        <button key={it.label} onClick={it.onClick} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium flex items-center justify-between ${it.active ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
+        <button key={it.label} onClick={it.onClick} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium flex items-center justify-between ${it.active ? 'bg-blue-400 text-yellow-400' : 'hover:bg-yellow-50 text-blue-700'}`}>
           <span className="flex items-center gap-2">{it.icon} {it.label}</span>
           {!!it.count && <span className="text-xs">{it.count}</span>}
         </button>
@@ -235,26 +235,26 @@ function AdminView() {
       <div>
         <h4 className="text-sm font-semibold">Jobs by {manager.name}</h4>
         <div className="mt-3 space-y-3">
-          {jobs.length===0 && <p className="text-sm text-slate-500">No jobs posted.</p>}
+          {jobs.length===0 && <p className="text-sm text-blue-500">No jobs posted.</p>}
           {jobs.map(j=>{
             const candidates = state.candidates.filter(c=>c.appliedForJob===j.id);
             return (
-              <div key={j.id} className="rounded-lg border p-3 bg-slate-50">
+              <div key={j.id} className="rounded-lg border p-3 bg-yellow-50">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold">{j.title}</p>
-                    <p className="text-xs text-slate-500">{j.location} • {j.salary}</p>
+                    <p className="font-semibold text-blue-700">{j.title}</p>
+                    <p className="text-xs text-blue-500">{j.location} • {j.salary}</p>
                   </div>
-                  <div className="text-xs text-slate-600">{candidates.length} applicants</div>
+                  <div className="text-xs text-blue-600">{candidates.length} applicants</div>
                 </div>
                 <div className="mt-2">
                   {candidates.map(c=> (
                     <div key={c.id} className="flex items-center justify-between mt-2">
                       <div>
                         <p className="text-sm font-medium">{c.name}</p>
-                        <p className="text-xs text-slate-500">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name || '—'}</p>
+                        <p className="text-xs text-blue-500">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name || '—'}</p>
                       </div>
-                      <Badge className="bg-slate-100 text-slate-700">{c.status}</Badge>
+                      <Badge className="bg-slate-100 text-blue-700">{c.status}</Badge>
                     </div>
                   ))}
                 </div>
@@ -270,16 +270,16 @@ function AdminView() {
     const referred = state.candidates.filter(c=>c.referredBy===recruiter.id);
     return (
       <div>
-        <h4 className="text-sm font-semibold">Referrals by {recruiter.name}</h4>
+        <h4 className="text-sm font-semibold text-blue-700">Referrals by {recruiter.name}</h4>
         <div className="mt-2 space-y-2">
-          {referred.length===0 && <p className="text-sm text-slate-500">No referrals yet.</p>}
+          {referred.length===0 && <p className="text-sm text-blue-500">No referrals yet.</p>}
           {referred.map(c=> (
-            <div key={c.id} className="rounded-lg border p-3 bg-slate-50 flex items-start justify-between">
+            <div key={c.id} className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between">
               <div>
                 <p className="font-medium">{c.name}</p>
-                <p className="text-xs text-slate-500">Applied: {state.jobs.find(j=>j.id===c.appliedForJob)?.title || '—'}</p>
+                <p className="text-xs text-blue-500">Applied: {state.jobs.find(j=>j.id===c.appliedForJob)?.title || '—'}</p>
               </div>
-              <div className="text-xs text-slate-600">{c.status}</div>
+              <div className="text-xs text-blue-600">{c.status}</div>
             </div>
           ))}
         </div>
@@ -296,22 +296,22 @@ function AdminView() {
         { label:`Total Recruiters`, icon:'🧑‍💼', active: tab==='recruiters', onClick:()=>setTab('recruiters'), count: recruiters.length },
       ]} />
 
-      <main>
+      <main className="flex-1 min-w-0">
         {tab==='overview' && (
           <div className="space-y-6">
             <Card title="Platform Summary">
               <div className="grid sm:grid-cols-3 gap-4">
-                <div className="rounded-lg border p-4 bg-slate-50 text-center">
-                  <p className="text-xs text-slate-500">Managers</p>
-                  <p className="text-xl font-semibold">{managers.length}</p>
+                <div className="rounded-lg border p-4 bg-yellow-50 text-center">
+                  <p className="text-xs text-blue-500">Managers</p>
+                  <p className="text-xl font-semibold text-blue-500">{managers.length}</p>
                 </div>
-                <div className="rounded-lg border p-4 bg-slate-50 text-center">
-                  <p className="text-xs text-slate-500">Recruiters</p>
-                  <p className="text-xl font-semibold">{recruiters.length}</p>
+                <div className="rounded-lg border p-4 bg-yellow-50 text-center">
+                  <p className="text-xs text-blue-500">Recruiters</p>
+                  <p className="text-xl font-semibold text-blue-500">{recruiters.length}</p>
                 </div>
-                <div className="rounded-lg border p-4 bg-slate-50 text-center">
-                  <p className="text-xs text-slate-500">Open Jobs</p>
-                  <p className="text-xl font-semibold">{state.jobs.length}</p>
+                <div className="rounded-lg border p-4 bg-yellow-50 text-center">
+                  <p className="text-xs text-blue-500">Open Jobs</p>
+                  <p className="text-xl font-semibold text-blue-500">{state.jobs.length}</p>
                 </div>
               </div>
             </Card>
@@ -321,8 +321,8 @@ function AdminView() {
                 {state.jobs.map(j => (
                   <div key={j.id} className="rounded-lg border p-3">
                     <p className="font-semibold">{j.title}</p>
-                    <p className="text-xs text-slate-500">{j.location} • {j.salary}</p>
-                    <p className="text-xs mt-2 text-slate-600">Posted by: {state.users.find(u=>u.id===j.createdBy)?.name}</p>
+                    <p className="text-xs text-blue-500">{j.location} • {j.salary}</p>
+                    <p className="text-xs mt-2 text-blue-600">Posted by: {state.users.find(u=>u.id===j.createdBy)?.name}</p>
                   </div>
                 ))}
               </div>
@@ -336,7 +336,7 @@ function AdminView() {
               <label className="block text-sm"><div className="font-medium">Full name</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} /></label>
               <label className="block text-sm"><div className="font-medium">Email</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} /></label>
               <label className="block text-sm"><div className="font-medium">Role</div><select className="mt-1 w-full rounded-lg border px-3 py-2" value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})}><option value="manager">Manager</option><option value="recruiter">Recruiter</option></select></label>
-              <div className="sm:col-span-2 flex gap-3 items-center"><Button type="submit" className="bg-slate-900 text-white">Create</Button><Button type="button" className="border" onClick={()=>setForm({name:'',email:'',role:'manager'})}>Clear</Button></div>
+              <div className="sm:col-span-2 flex gap-3 items-center"><Button type="submit" className="bg-blue-600 text-white">Create</Button><Button type="button" className="border" onClick={()=>setForm({name:'',email:'',role:'manager'})}>Clear</Button></div>
             </form>
           </Card>
         )}
@@ -345,7 +345,7 @@ function AdminView() {
           <Card title={`Managers (${managers.length})`} subtitle="Click to inspect each manager">
             <div className="grid sm:grid-cols-2 gap-4">
               {managers.map(m => (
-                <details key={m.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{m.name}</p><p className="text-xs text-slate-500">{m.email}</p></div><div className="text-xs text-slate-600">View</div></summary><div className="mt-3"><ManagerDetail manager={m} /></div></details>
+                <details key={m.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{m.name}</p><p className="text-xs text-blue-500">{m.email}</p></div><div className="text-xs text-blue-600">View</div></summary><div className="mt-3"><ManagerDetail manager={m} /></div></details>
               ))}
             </div>
           </Card>
@@ -355,7 +355,7 @@ function AdminView() {
           <Card title={`Recruiters (${recruiters.length})`} subtitle="Click to inspect each recruiter">
             <div className="grid sm:grid-cols-2 gap-4">
               {recruiters.map(r => (
-                <details key={r.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{r.name}</p><p className="text-xs text-slate-500">{r.email}</p></div><div className="text-xs text-slate-600">View</div></summary><div className="mt-3"><RecruiterDetail recruiter={r} /></div></details>
+                <details key={r.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{r.name}</p><p className="text-xs text-blue-500">{r.email}</p></div><div className="text-xs text-blue-600">View</div></summary><div className="mt-3"><RecruiterDetail recruiter={r} /></div></details>
               ))}
             </div>
           </Card>
@@ -386,7 +386,7 @@ function ManagerView() {
         { label:'Applications per Job', icon:'🧾', active: tab==='apps', onClick:()=>setTab('apps') },
       ]} />
 
-      <main>
+      <main className="flex-1 min-w-0">
         {tab==='profile' && <Card title="Profile" subtitle={user.name}><p className="text-sm">Email: {user.email}</p></Card>}
 
         {tab==='create' && (
@@ -399,7 +399,7 @@ function ManagerView() {
                 <label className="block text-sm"><div className="font-medium">Salary</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.salary} onChange={(e)=>setForm({...form,salary:e.target.value})} /></label>
                 <label className="block text-sm sm:col-span-2"><div className="font-medium">Location</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.location} onChange={(e)=>setForm({...form,location:e.target.value})} /></label>
               </div>
-              <div className="flex gap-3"><Button type="submit" className="bg-slate-900 text-white">Publish Job</Button><Button type="button" className="border" onClick={()=>setForm({ title:'', description:'', skills:'', salary:'', location:'' })}>Clear</Button></div>
+              <div className="flex gap-3"><Button type="submit" className="bg-blue-600 text-white">Publish Job</Button><Button type="button" className="border" onClick={()=>setForm({ title:'', description:'', skills:'', salary:'', location:'' })}>Clear</Button></div>
             </form>
           </Card>
         )}
@@ -410,9 +410,9 @@ function ManagerView() {
               {myJobs.map(j=> (
                 <div key={j.id} className="rounded-lg border p-3">
                   <p className="font-semibold">{j.title}</p>
-                  <p className="text-xs text-slate-500">{j.location} • {j.salary}</p>
-                  <p className="text-sm text-slate-600 mt-2 line-clamp-2">{j.description}</p>
-                  <div className="text-xs text-slate-600 mt-2">Applicants: {state.candidates.filter(c=>c.appliedForJob===j.id).length}</div>
+                  <p className="text-xs text-blue-500">{j.location} • {j.salary}</p>
+                  <p className="text-sm text-blue-700 mt-2 line-clamp-2">{j.description}</p>
+                  <div className="text-xs text-blue-700 mt-2">Applicants: {state.candidates.filter(c=>c.appliedForJob===j.id).length}</div>
                 </div>
               ))}
             </div>
@@ -423,13 +423,13 @@ function ManagerView() {
           <Card title="Applications" subtitle="Applications for your jobs">
             <div className="space-y-3">
               {state.candidates.filter(c=> myJobs.some(j=>j.id===c.appliedForJob)).map(c=> (
-                <div key={c.id} className="rounded-lg border p-3 bg-slate-50 flex items-start justify-between">
+                <div key={c.id} className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between">
                   <div>
                     <p className="font-semibold">{c.name}</p>
-                    <p className="text-xs text-slate-500">Applied for: {state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
-                    <p className="text-xs text-slate-600">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name}</p>
+                    <p className="text-xs text-blue-500">Applied for: {state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
+                    <p className="text-xs text-blue-700">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name}</p>
                   </div>
-                  <div className="text-xs text-slate-600">{c.status}</div>
+                  <div className="text-xs text-blue-700">{c.status}</div>
                 </div>
               ))}
             </div>
@@ -464,7 +464,7 @@ function RecruiterView(){
         { label:'Refer Candidate', icon:'➕', active:true, onClick:()=>{} },
       ]} />
 
-      <main>
+      <main className="flex-1 min-w-0">
         <div className="space-y-6">
           <Card title="Refer Candidate" subtitle="Select job and provide candidate details">
             <form onSubmit={refer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -474,21 +474,21 @@ function RecruiterView(){
               <label className="block text-sm"><div className="font-medium">Phone</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.phone} onChange={(e)=>setForm({...form, phone:e.target.value})} /></label>
               <label className="block text-sm"><div className="font-medium">Resume URL</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.resume} onChange={(e)=>setForm({...form, resume:e.target.value})} /></label>
               <label className="block text-sm sm:col-span-2"><div className="font-medium">Notes</div><textarea className="mt-1 w-full rounded-lg border px-3 py-2" value={form.notes} onChange={(e)=>setForm({...form, notes:e.target.value})} /></label>
-              <div className="sm:col-span-2 flex gap-3"><Button type="submit" className="bg-slate-900 text-white">Refer</Button><Button type="button" className="border" onClick={()=>setForm({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob })}>Clear</Button></div>
+              <div className="sm:col-span-2 flex gap-3"><Button type="submit" className="bg-blue-600 text-white">Refer</Button><Button type="button" className="border" onClick={()=>setForm({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob })}>Clear</Button></div>
             </form>
           </Card>
 
           <div className="grid lg:grid-cols-2 gap-6">
             <Card title="My Referrals" subtitle="Click a candidate to view details">
               <div className="space-y-2">
-                {myReferrals.length===0 && <p className="text-sm text-slate-500">No referrals yet.</p>}
+                {myReferrals.length===0 && <p className="text-sm text-blue-500">No referrals yet.</p>}
                 {myReferrals.map(c=> (
-                  <button key={c.id} onClick={()=>openCandidate(c)} className="w-full text-left rounded-lg p-3 border hover:bg-slate-50 flex items-center justify-between">
+                  <button key={c.id} onClick={()=>openCandidate(c)} className="w-full text-left rounded-lg p-3 border hover:bg-yellow-50 flex items-center justify-between">
                     <div>
                       <p className="font-medium">{c.name}</p>
-                      <p className="text-xs text-slate-500">{state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
+                      <p className="text-xs text-blue-500">{state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
                     </div>
-                    <div className="text-xs text-slate-600">{c.status}</div>
+                    <div className="text-xs text-blue-700">{c.status}</div>
                   </button>
                 ))}
               </div>
@@ -499,27 +499,27 @@ function RecruiterView(){
                 <div className="space-y-3">
                   <div>
                     <p className="font-semibold">{selectedCandidate.name}</p>
-                    <p className="text-xs text-slate-500">{selectedCandidate.email} • {selectedCandidate.phone}</p>
-                    <p className="text-xs text-slate-500">Applied for: {state.jobs.find(j=>j.id===selectedCandidate.appliedForJob)?.title}</p>
+                    <p className="text-xs text-blue-500">{selectedCandidate.email} • {selectedCandidate.phone}</p>
+                    <p className="text-xs text-blue-500">Applied for: {state.jobs.find(j=>j.id===selectedCandidate.appliedForJob)?.title}</p>
                   </div>
 
                   <div>
                     <p className="text-xs font-medium">Status</p>
                     <div className="mt-2 flex gap-2 flex-wrap">
                       {['referred','contacted','shortlisted','rejected','hired'].map(s=> (
-                        <button key={s} onClick={()=>updateStatus(selectedCandidate.id, s, `Marked ${s}`)} className={`rounded-md px-3 py-1 text-sm ${selectedCandidate.status===s ? 'bg-slate-900 text-white' : 'border'}`}>{s}</button>
+                        <button key={s} onClick={()=>updateStatus(selectedCandidate.id, s, `Marked ${s}`)} className={`rounded-md px-3 py-1 text-sm ${selectedCandidate.status===s ? 'bg-blue-600 text-white' : 'border'}`}>{s}</button>
                       ))}
                     </div>
                   </div>
 
                   <div>
                     <p className="text-xs font-medium">Notes</p>
-                    <p className="text-sm text-slate-600 mt-1">{selectedCandidate.notes || '—'}</p>
+                    <p className="text-sm text-blue-700 mt-1">{selectedCandidate.notes || '—'}</p>
                   </div>
 
                   <div>
                     <p className="text-xs font-medium">Contact History</p>
-                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                    <ul className="mt-2 space-y-1 text-xs text-blue-700">
                       {(selectedCandidate.contactHistory||[]).map((h,i)=> (
                         <li key={i}>• {new Date(h.date).toLocaleString()}: {h.note}</li>
                       ))}
@@ -527,7 +527,7 @@ function RecruiterView(){
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Select a candidate from the list to view details.</p>
+                <p className="text-sm text-blue-500">Select a candidate from the list to view details.</p>
               )}
             </Card>
           </div>
