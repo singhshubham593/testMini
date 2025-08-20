@@ -499,16 +499,77 @@ function ManagerView() {
   const { users, jobs, candidates,mi } = useApp();
   const user = useCurrentUser();
   const myJobs = jobs.filter(j => j.createdBy === user.id);
-  const [tab, setTab] = useState('jobs');
-  const [form, setForm] = useState({ title:'', description:'', skills:'', salary:'', location:'' });
+   
+  const [tab, setTab] = useState("jobs");
 
-  const postJob = (e)=>{
+  const [form, setForm] = useState({
+    title: "",
+    employmentType: "",
+    industry: "",
+    functionalArea: "",
+    description: "",
+    minExp: "",
+    maxExp: "",
+    salaryType: "yearly",
+    minSalary: "",
+    maxSalary: "",
+    jobLocation: "",
+    jobNature: "fulltime",
+    shifts: [],
+    questionnaire: [],
+    companyName: "",
+    companyDescription: "",
+    skills: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === "checkbox") {
+      setForm((prev) => ({
+        ...prev,
+        [name]: checked
+          ? [...prev[name], value]
+          : prev[name].filter((v) => v !== value),
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const postJob = (e) => {
     e.preventDefault();
-    if(!form.title) return;
-    const payload = { ...form, skills: form.skills.split(',').map(s=>s.trim()).filter(Boolean), createdBy: user.id };
+    if (!form.title) return;
+
+    const payload = {
+      ...form,
+      skills: form.skills
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      createdBy: user.id,
+    };
+
     dispatch(actions.addJob(payload));
-    setForm({ title:'', description:'', skills:'', salary:'', location:'' });
-    setTab('jobs');
+    setForm({
+      title: "",
+      employmentType: "",
+      industry: "",
+      functionalArea: "",
+      description: "",
+      minExp: "",
+      maxExp: "",
+      salaryType: "yearly",
+      minSalary: "",
+      maxSalary: "",
+      jobLocation: "",
+      jobNature: "fulltime",
+      shifts: [],
+      questionnaire: [],
+      companyName: "",
+      companyDescription: "",
+      skills: "",
+    });
+    setTab("jobs");
   };
 
   const selecteJob = jobs.find(j => j.id === mi.managerSidebar.selectedJobId) || null;
@@ -538,16 +599,273 @@ function ManagerView() {
 
         {tab==='create' && (
           <Card title="Create Job" subtitle="Fill basic details">
-            <form onSubmit={postJob} className="grid grid-cols-1 gap-3">
-              <label className="block text-sm"><div className="font-medium">Title</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.title} onChange={(e)=>setForm({...form,title:e.target.value})} /></label>
-              <label className="block text-sm"><div className="font-medium">Description</div><textarea className="mt-1 w-full rounded-lg border px-3 py-2" value={form.description} onChange={(e)=>setForm({...form,description:e.target.value})} /></label>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <label className="block text-sm"><div className="font-medium">Skills (comma)</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.skills} onChange={(e)=>setForm({...form,skills:e.target.value})} /></label>
-                <label className="block text-sm"><div className="font-medium">Salary</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.salary} onChange={(e)=>setForm({...form,salary:e.target.value})} /></label>
-                <label className="block text-sm sm:col-span-2"><div className="font-medium">Location</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.location} onChange={(e)=>setForm({...form,location:e.target.value})} /></label>
-              </div>
-              <div className="flex gap-3"><Button type="submit" className="bg-blue-600 text-white">Publish Job</Button><Button type="button" className="border" onClick={()=>setForm({ title:'', description:'', skills:'', salary:'', location:'' })}>Clear</Button></div>
-            </form>
+             <form onSubmit={postJob} className="space-y-6">
+        {/* Job Title */}
+        <div>
+          <label className="font-semibold block">Job Title</label>
+          <input
+            type="text"
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            className="w-full border p-2 rounded-lg mt-2"
+          />
+        </div>
+
+        {/* Employment Type */}
+        <div>
+          <label className="font-semibold block">Employment Type</label>
+          <div className="flex flex-wrap gap-4 mt-2">
+            {["Work From Home", "Permanent", "Contractual", "Internship"].map(
+              (type) => (
+                <label key={type} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="employmentType"
+                    value={type}
+                    checked={form.employmentType === type}
+                    onChange={handleChange}
+                  />
+                  {type}
+                </label>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Industry & Functional Area */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="font-semibold block">Select Industry</label>
+            <select
+              name="industry"
+              value={form.industry}
+              onChange={handleChange}
+              className="w-full border p-2 rounded-lg mt-2"
+            >
+              <option value="">Select Industry</option>
+              <option>IT</option>
+              <option>Healthcare</option>
+              <option>Finance</option>
+            </select>
+          </div>
+          <div>
+            <label className="font-semibold block">Select Functional Area</label>
+            <select
+              name="functionalArea"
+              value={form.functionalArea}
+              onChange={handleChange}
+              className="w-full border p-2 rounded-lg mt-2"
+            >
+              <option value="">Select Functional Area</option>
+              <option>Developer</option>
+              <option>Designer</option>
+              <option>HR</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Job Description */}
+        <div>
+          <label className="font-semibold block">Job Description</label>
+          <textarea
+            name="description"
+            rows="4"
+            value={form.description}
+            onChange={handleChange}
+            className="w-full border p-2 rounded-lg mt-2"
+          ></textarea>
+        </div>
+
+        {/* Skills */}
+        <div>
+          <label className="font-semibold block">Skills (comma separated)</label>
+          <input
+            type="text"
+            name="skills"
+            value={form.skills}
+            onChange={handleChange}
+            placeholder="e.g. React, Node.js, SQL"
+            className="w-full border p-2 rounded-lg mt-2"
+          />
+        </div>
+
+        {/* Experience */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="font-semibold block">Min Exp</label>
+            <input
+              type="number"
+              name="minExp"
+              value={form.minExp}
+              onChange={handleChange}
+              className="w-full border p-2 rounded-lg mt-2"
+            />
+          </div>
+          <div>
+            <label className="font-semibold block">Max Exp</label>
+            <input
+              type="number"
+              name="maxExp"
+              value={form.maxExp}
+              onChange={handleChange}
+              className="w-full border p-2 rounded-lg mt-2"
+            />
+          </div>
+        </div>
+
+        {/* Salary */}
+        <div>
+          <label className="font-semibold block">Salary</label>
+          <div className="flex items-center gap-6 mt-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="salaryType"
+                value="yearly"
+                checked={form.salaryType === "yearly"}
+                onChange={handleChange}
+              />{" "}
+              Yearly
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="salaryType"
+                value="monthly"
+                checked={form.salaryType === "monthly"}
+                onChange={handleChange}
+              />{" "}
+              Monthly
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            <input
+              type="number"
+              name="minSalary"
+              value={form.minSalary}
+              onChange={handleChange}
+              placeholder="Min Salary"
+              className="border p-2 rounded-lg"
+            />
+            <input
+              type="number"
+              name="maxSalary"
+              value={form.maxSalary}
+              onChange={handleChange}
+              placeholder="Max Salary"
+              className="border p-2 rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Job Location */}
+        <div>
+          <label className="font-semibold block">Select Job Location</label>
+          <input
+            type="text"
+            name="jobLocation"
+            value={form.jobLocation}
+            onChange={handleChange}
+            placeholder="Enter Job Location"
+            className="w-full border p-2 rounded-lg mt-2"
+          />
+        </div>
+
+        {/* Job Nature */}
+        <div>
+          <label className="font-semibold block">Job Nature</label>
+          <div className="flex gap-6 mt-2">
+            {["fulltime", "parttime"].map((nature) => (
+              <label key={nature} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="jobNature"
+                  value={nature}
+                  checked={form.jobNature === nature}
+                  onChange={handleChange}
+                />
+                {nature === "fulltime" ? "Full Time" : "Part Time"}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Shifts */}
+        <div>
+          <label className="font-semibold block">Shifts</label>
+          <div className="flex flex-wrap gap-4 mt-2">
+            {["Morning", "Noon", "Evening", "Night", "Split", "Rotating"].map(
+              (shift) => (
+                <label key={shift} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="shifts"
+                    value={shift}
+                    checked={form.shifts.includes(shift)}
+                    onChange={handleChange}
+                  />
+                  {shift}
+                </label>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Questionnaire */}
+        <div>
+          <label className="font-semibold block">Questionnaire</label>
+          <div className="flex flex-col gap-3 mt-2">
+            {[
+              "Skills",
+              "Willing to relocate",
+              "Expected CTC",
+              "Notice Period",
+              "Date of Birth",
+            ].map((q) => (
+              <label key={q} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="questionnaire"
+                  value={q}
+                  checked={form.questionnaire.includes(q)}
+                  onChange={handleChange}
+                />
+                {q}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Company Details */}
+        <div>
+          <label className="font-semibold block">Company Details</label>
+          <input
+            type="text"
+            name="companyName"
+            value={form.companyName}
+            onChange={handleChange}
+            placeholder="Company Name"
+            className="w-full border p-2 rounded-lg mt-2"
+          />
+          <textarea
+            name="companyDescription"
+            rows="3"
+            value={form.companyDescription}
+            onChange={handleChange}
+            placeholder="Company Description"
+            className="w-full border p-2 rounded-lg mt-2"
+          ></textarea>
+        </div>
+
+        {/* Submit */}
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+        >
+          Post Job
+        </button>
+      </form>
           </Card>
         )}
 
