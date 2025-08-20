@@ -81,6 +81,12 @@ const appSlice = createSlice({
         selectedUserId: null, // manager or recruiter selected in admin view
       },
     },
+    mi: {
+      managerSidebar:{
+        jobsOpen: false, // for manager view
+        selectedJobId: null, // job selected in manager view
+      },
+    },
   },
   reducers: {
     login(state, action) {
@@ -127,6 +133,13 @@ const appSlice = createSlice({
     },
     selectAdminUser(state, action) {
       state.ui.adminSidebar.selectedUserId = action.payload; // null to clear
+    },
+    // UI (Manager sidebar behavior)
+    toggleManagerJobs(state) {
+      state.mi.managerSidebar.jobsOpen = !state.mi.managerSidebar.jobsOpen;
+    },
+    selectManagerJob(state, action) {
+      state.mi.managerSidebar.selectedJobId = action.payload; // null to clear
     },
   },
 });
@@ -483,7 +496,7 @@ function AdminView() {
    ------------------ */
 function ManagerView() {
   const dispatch = useDispatch();
-  const { users, jobs, candidates } = useApp();
+  const { users, jobs, candidates,mi } = useApp();
   const user = useCurrentUser();
   const myJobs = jobs.filter(j => j.createdBy === user.id);
   const [tab, setTab] = useState('jobs');
@@ -498,12 +511,25 @@ function ManagerView() {
     setTab('jobs');
   };
 
+  const selecteJob = jobs.find(j => j.id === mi.managerSidebar.selectedJobId) || null;
+
   return (
     <AppShell>
       <Sidebar>
         <SidebarButton active={tab==='profile'} onClick={()=>setTab('profile')} left={<span>👤</span>}>Profile</SidebarButton>
         <SidebarButton active={tab==='create'} onClick={()=>setTab('create')} left={<span>➕</span>}>Create New Job Post</SidebarButton>
-        <SidebarButton active={tab==='jobs'} onClick={()=>setTab('jobs')} left={<span>📋</span>} right={<span className="text-xs">{myJobs.length}</span>}>Total Jobs Posted</SidebarButton>
+        <div className="mt-2"> 
+          <SidebarButton active={tab==='jobs'} onClick={()=>{setTab('jobs'); dispatch(actions.toggleManagerJobs()); }} left={<span>📋</span>} right={ mi.managerSidebar.jobsOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}>Total Jobs Posted</SidebarButton>
+          {mi.managerSidebar.jobsOpen && (
+            <div className="mt-1 ml-2 space-y-1">
+              {jobs.map(j => (
+                <button key={j.id} onClick={()=>dispatch(actions.selectManagerJob(j.id))} className={`w-full text-left rounded-lg px-3 py-1.5 text-sm hover:bg-yellow-50 ${mi.managerSidebar.selectedJobId===j.id ? 'bg-blue-100' : ''}`}>
+                  {j.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <SidebarButton active={tab==='apps'} onClick={()=>setTab('apps')} left={<span>🧾</span>}>Applications per Job</SidebarButton>
       </Sidebar>
 
