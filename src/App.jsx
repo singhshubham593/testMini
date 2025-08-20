@@ -41,7 +41,7 @@ const nowISO = () => new Date().toISOString();
 const initialUsers = [
   { id: 1, name: "Admin User", email: "admin@company.com", role: "admin" },
   { id: 2, name: "Maya Kapoor", email: "manager@company.com", role: "manager" },
-  { id: 3, name: "Shubham", email: "manage2@company.com", role: "manager" },
+  { id: 3, name: "Raj singh", email: "manage2@company.com", role: "manager" },
   { id: 4, name: "Sahil Rao", email: "recruiter@company.com", role: "recruiter" },
   { id: 5, name: "karan", email: "recruiter2@company.com", role: "recruiter" },
 ];
@@ -585,7 +585,7 @@ function ManagerView() {
             <div className="mt-1 ml-2 space-y-1">
               {jobs.map(j => (
                 <button key={j.id} onClick={()=>dispatch(actions.selectManagerJob(j.id))} className={`w-full text-left rounded-lg px-3 py-1.5 text-sm hover:bg-yellow-50 ${mi.managerSidebar.selectedJobId===j.id ? 'bg-blue-100' : ''}`}>
-                  {j.title}
+                  {j.title} 
                 </button>
               ))}
             </div>
