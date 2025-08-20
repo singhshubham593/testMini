@@ -56,6 +56,9 @@ const initialJobs = [
 
 const initialCandidates = [
   { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 3, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 2, name: "Sayan", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 3, name: "Radha", email: "radha@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
   { id: 2, name: "Sayan", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 3, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
   { id: 3, name: "Radha", email: "radha@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 4, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
   { id: 4, name: "Vinod", email: "vinod@example.com", phone: "+91 33333 33333", resume: "https://example.com/vinod.pdf", notes: " API skills", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
@@ -290,12 +293,13 @@ function AdminView() {
     return (
       <div>
         <h4 className="text-sm font-semibold">Jobs by {manager.name}</h4>
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-4 space-y-3">
           {mJobs.length===0 && <p className="text-sm text-blue-500">No jobs posted.</p>}
           {mJobs.map(j=>{
             const cands = candidates.filter(c=>c.appliedForJob===j.id);
             return (
-              <div key={j.id} className="rounded-lg border p-3 bg-yellow-50">
+              <div className=" ">
+              <div key={j.id} className="  rounded-lg border p-3 bg-yellow-50">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-semibold text-blue-700">{j.title}</p>
@@ -315,6 +319,7 @@ function AdminView() {
                   ))}
                 </div>
               </div>
+              </div>
             );
           })}
         </div>
@@ -327,7 +332,7 @@ function AdminView() {
     return (
       <div>
         <h4 className="text-sm font-semibold text-blue-700">Referrals by {recruiter.name}</h4>
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {referred.length===0 && <p className="text-sm text-blue-500">No referrals yet.</p>}
           {referred.map(c=> (
             <div key={c.id} className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between">
