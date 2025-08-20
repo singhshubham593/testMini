@@ -1,12 +1,16 @@
- import React, { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
+ import React, { useEffect, useMemo, useState } from "react";
+import { Provider, useDispatch, useSelector } from "react-redux";
+import { configureStore, createSlice, nanoid } from "@reduxjs/toolkit";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 /**
  * Single-file React Job Portal (Admin • Manager • Recruiter)
+ * - State management migrated to Redux Toolkit (@reduxjs/toolkit + react-redux)
  * - Tailwind CSS only (assumes Tailwind is set up in the host project)
  * - Login: Email / WhatsApp (mock) / Google (mock)
- * - Full linking: Admin → Manager → Recruiter → Candidate → Status
- * - All data in React Context (in-memory)
- * - Beautiful, modern UI using Tailwind utility classes
+ * - Admin Sidebar: Totals + expandable Managers/Recruiters lists
+ * - Click a manager/recruiter to view details on the right panel
+ * - All dummy data lives in Redux store
  */
 
 /* --------------------
@@ -29,66 +33,107 @@ const detectRole = (email) => {
   return null;
 };
 
-let nextIds = { user: 10, job: 10, candidate: 100 };
-
 /* -----------------
    Initial in-memory DB
    ----------------- */
-const initialState = {
-  currentUser: null,
-  users: [
-    { id: 1, name: "Admin User", email: "admin@company.com", role: "admin" },
-    { id: 2, name: "Maya Kapoor", email: "manager@company.com", role: "manager" },
-    { id: 3, name: "Sahil Rao", email: "recruiter@company.com", role: "recruiter" },
-  ],
-  jobs: [
-    { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React","Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: new Date().toISOString() },
-    { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
-    { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
-    { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() },
-    { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: new Date().toISOString() }
-  ],
-  candidates: [
-    { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: new Date().toISOString(), note: "WhatsApp message" }] },
-  ],
-};
+const nowISO = () => new Date().toISOString();
+
+const initialUsers = [
+  { id: 1, name: "Admin User", email: "admin@company.com", role: "admin" },
+  { id: 2, name: "Maya Kapoor", email: "manager@company.com", role: "manager" },
+  { id: 3, name: "Shubham", email: "manage2@company.com", role: "manager" },
+  { id: 4, name: "Sahil Rao", email: "recruiter@company.com", role: "recruiter" },
+  { id: 5, name: "karan", email: "recruiter2@company.com", role: "recruiter" },
+];
+
+const initialJobs = [
+  { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React","Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: nowISO() },
+  { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO() },
+  { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 3, createdAt: nowISO() },
+  { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO() },
+  { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node","SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO() },
+];
+
+const initialCandidates = [
+  { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 2, name: "Sayan", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 3, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 3, name: "Radha", email: "radha@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 4, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 4, name: "Vinod", email: "vinod@example.com", phone: "+91 33333 33333", resume: "https://example.com/vinod.pdf", notes: " API skills", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+];
 
 /* ---------
-   Reducer
+   Redux Slice
    --------- */
-function reducer(state, action) {
-  switch (action.type) {
-    case "LOGIN":
-      return { ...state, currentUser: action.payload };
-    case "LOGOUT":
-      return { ...state, currentUser: null };
-    case "ADD_USER": {
-      const user = { id: nextIds.user++, ...action.payload };
-      return { ...state, users: [...state.users, user] };
-    }
-    case "ADD_JOB": {
-      const job = { id: nextIds.job++, createdAt: new Date().toISOString(), ...action.payload };
-      return { ...state, jobs: [job, ...state.jobs] };
-    }
-    case "ADD_CANDIDATE": {
-      const cand = { id: nextIds.candidate++, contactHistory: [], ...action.payload };
-      return { ...state, candidates: [cand, ...state.candidates] };
-    }
-    case "UPDATE_CANDIDATE": {
+const appSlice = createSlice({
+  name: "app",
+  initialState: {
+    currentUser: null,
+    users: initialUsers,
+    jobs: initialJobs,
+    candidates: initialCandidates,
+    ui: {
+      adminSidebar: {
+        managersOpen: false,
+        recruitersOpen: false,
+        selectedUserId: null, // manager or recruiter selected in admin view
+      },
+    },
+  },
+  reducers: {
+    login(state, action) {
+      state.currentUser = action.payload;
+    },
+    logout(state) {
+      state.currentUser = null;
+    },
+    addUser: {
+      reducer(state, action) {
+        state.users.push(action.payload);
+      },
+      prepare(user) {
+        return { payload: { id: Number(user.id) || Number(nanoid(6).replace(/\D/g, "").slice(0, 4)) || Math.floor(Math.random()*10000), ...user } };
+      },
+    },
+    addJob: {
+      reducer(state, action) {
+        state.jobs.unshift(action.payload);
+      },
+      prepare(job) {
+        return { payload: { id: Number(job.id) || Number(nanoid(5).replace(/\D/g, "").slice(0, 3)) || Math.floor(Math.random()*1000), createdAt: nowISO(), ...job } };
+      },
+    },
+    addCandidate: {
+      reducer(state, action) {
+        state.candidates.unshift(action.payload);
+      },
+      prepare(c) {
+        return { payload: { id: Number(c.id) || Number(nanoid(7).replace(/\D/g, "").slice(0, 5)) || Math.floor(Math.random()*100000), contactHistory: [], ...c } };
+      },
+    },
+    updateCandidate(state, action) {
       const { id, updates } = action.payload;
-      const candidates = state.candidates.map((c) => (c.id === id ? { ...c, ...updates } : c));
-      return { ...state, candidates };
-    }
-    default:
-      return state;
-  }
-}
+      const idx = state.candidates.findIndex((c) => c.id === id);
+      if (idx > -1) state.candidates[idx] = { ...state.candidates[idx], ...updates };
+    },
+    // UI (Admin sidebar behavior)
+    toggleManagers(state) {
+      state.ui.adminSidebar.managersOpen = !state.ui.adminSidebar.managersOpen;
+    },
+    toggleRecruiters(state) {
+      state.ui.adminSidebar.recruitersOpen = !state.ui.adminSidebar.recruitersOpen;
+    },
+    selectAdminUser(state, action) {
+      state.ui.adminSidebar.selectedUserId = action.payload; // null to clear
+    },
+  },
+});
 
-/* -------
-   Context
-   ------- */
-const AppDB = createContext(null);
-const useDB = () => useContext(AppDB);
+const { actions, reducer } = appSlice;
+const store = configureStore({ reducer: { app: reducer } });
+
+// Selectors
+const useApp = () => useSelector((s) => s.app);
+const useCurrentUser = () => useSelector((s) => s.app.currentUser);
 
 /* ------------------
    Small UI primitives
@@ -118,7 +163,8 @@ const Card = ({ title, subtitle, right, children }) => (
    Login Component
    ------------------ */
 function Login() {
-  const { state, dispatch } = useDB();
+  const dispatch = useDispatch();
+  const app = useApp();
   const [email, setEmail] = useState("");
   const [method, setMethod] = useState("email");
   const [error, setError] = useState("");
@@ -129,10 +175,9 @@ function Login() {
     const role = detectRole(e);
     if (!role) return setError("Unauthorized email — use company email or demo buttons");
 
-    // find existing user or create transient one
-    const existing = state.users.find((u) => u.email === e);
-    const user = existing || { id: nextIds.user++, name: e.split('@')[0], email: e, role };
-    dispatch({ type: 'LOGIN', payload: user });
+    const existing = app.users.find((u) => u.email === e);
+    const user = existing || { id: Math.floor(Math.random()*10000), name: e.split('@')[0], email: e, role };
+    dispatch(actions.login(user));
   };
 
   return (
@@ -157,11 +202,11 @@ function Login() {
               <input value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-yellow-200 px-3 py-2" placeholder="you@company.com" />
             </label>
             {error && <div className="text-xs text-rose-600">{error}</div>}
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <Button type="submit" className="bg-blue-600 text-white">Sign in</Button>
-              <Button type="button" className="border" onClick={() => handleLogin('admin@company.com')}>Demo Admin</Button>
-              <Button type="button" className="border" onClick={() => handleLogin('manager@company.com')}>Demo Manager</Button>
-              <Button type="button" className="border" onClick={() => handleLogin('recruiter@company.com')}>Demo Recruiter</Button>
+              <Button type="button" className="border" onClick={()=>handleLogin('admin@company.com')}>Demo Admin</Button>
+              <Button type="button" className="border" onClick={()=>handleLogin('manager@company.com')}>Demo Manager</Button>
+              <Button type="button" className="border" onClick={()=>handleLogin('recruiter@company.com')}>Demo Recruiter</Button>
             </div>
           </form>
         </Card>
@@ -174,8 +219,8 @@ function Login() {
    App Shell
    ------------------ */
 function AppShell({ children }) {
-  const { state, dispatch } = useDB();
-  const user = state.currentUser;
+  const user = useCurrentUser();
+  const dispatch = useDispatch();
   return (
     <div className="min-h-screen bg-yellow-50">
       <header className="sticky top-0 z-20 bg-white border-b border-yellow-200">
@@ -189,7 +234,7 @@ function AppShell({ children }) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-blue-600">Role: <span className="font-semibold">{user?.role}</span></span>
-            {user && <button onClick={()=>dispatch({type:'LOGOUT'})} className="rounded-lg border px-3 py-2 text-sm">Logout</button>}
+            {user && <button onClick={()=>dispatch(actions.logout())} className="rounded-lg border px-3 py-2 text-sm">Logout</button>}
           </div>
         </div>
       </header>
@@ -201,46 +246,54 @@ function AppShell({ children }) {
 }
 
 /* ------------------
-   Sidebar Component
+   Sidebar Component (generic)
    ------------------ */
-const Sidebar = ({ items }) => (
+const SidebarButton = ({ active, onClick, left, right, children }) => (
+  <button onClick={onClick} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium flex items-center justify-between ${active ? 'bg-blue-400 text-yellow-100' : 'hover:bg-yellow-50 text-blue-700'}`}>
+    <span className="flex items-center gap-2">{left}{children}</span>
+    {right}
+  </button>
+);
+
+const Sidebar = ({ children }) => (
   <aside className="rounded-2xl border border-yellow-200 bg-white p-3 shadow-sm h-fit w-64 shrink-0">
     <div className="px-2 pb-1">
       <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Dashboard</p>
     </div>
-    <nav className="mt-1 space-y-1">
-      {items.map((it) => (
-        <button key={it.label} onClick={it.onClick} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium flex items-center justify-between ${it.active ? 'bg-blue-400 text-yellow-400' : 'hover:bg-yellow-50 text-blue-700'}`}>
-          <span className="flex items-center gap-2">{it.icon} {it.label}</span>
-          {!!it.count && <span className="text-xs">{it.count}</span>}
-        </button>
-      ))}
-  </nav>
+    <nav className="mt-1 space-y-1">{children}</nav>
   </aside>
 );
 
 /* ------------------
-   Admin View
+   Admin View (with expandable lists & right panel details)
    ------------------ */
 function AdminView() {
-  const { state, dispatch } = useDB();
+  const dispatch = useDispatch();
+  const { users, jobs, candidates, ui } = useApp();
   const [tab, setTab] = useState('overview');
   const [form, setForm] = useState({ name:'', email:'', role:'manager' });
 
-  const managers = state.users.filter(u=>u.role==='manager');
-  const recruiters = state.users.filter(u=>u.role==='recruiter');
+  const managers = users.filter(u=>u.role==='manager');
+  const recruiters = users.filter(u=>u.role==='recruiter');
 
-  const addUser = (e)=>{ e.preventDefault(); if(!form.name||!form.email) return; dispatch({type:'ADD_USER', payload:form}); setForm({name:'',email:'',role:'manager'}); }
+  const addUser = (e)=>{
+    e.preventDefault();
+    if(!form.name||!form.email) return;
+    dispatch(actions.addUser(form));
+    setForm({name:'',email:'',role:'manager'});
+  };
+
+  const selectedUser = users.find(u => u.id === ui.adminSidebar.selectedUserId) || null;
 
   const ManagerDetail = ({manager})=>{
-    const jobs = state.jobs.filter(j=>j.createdBy===manager.id);
+    const mJobs = jobs.filter(j=>j.createdBy===manager.id);
     return (
       <div>
         <h4 className="text-sm font-semibold">Jobs by {manager.name}</h4>
         <div className="mt-3 space-y-3">
-          {jobs.length===0 && <p className="text-sm text-blue-500">No jobs posted.</p>}
-          {jobs.map(j=>{
-            const candidates = state.candidates.filter(c=>c.appliedForJob===j.id);
+          {mJobs.length===0 && <p className="text-sm text-blue-500">No jobs posted.</p>}
+          {mJobs.map(j=>{
+            const cands = candidates.filter(c=>c.appliedForJob===j.id);
             return (
               <div key={j.id} className="rounded-lg border p-3 bg-yellow-50">
                 <div className="flex items-start justify-between">
@@ -248,14 +301,14 @@ function AdminView() {
                     <p className="font-semibold text-blue-700">{j.title}</p>
                     <p className="text-xs text-blue-500">{j.location} • {j.salary}</p>
                   </div>
-                  <div className="text-xs text-blue-600">{candidates.length} applicants</div>
+                  <div className="text-xs text-blue-600">{cands.length} applicants</div>
                 </div>
                 <div className="mt-2">
-                  {candidates.map(c=> (
+                  {cands.map(c=> (
                     <div key={c.id} className="flex items-center justify-between mt-2">
                       <div>
                         <p className="text-sm font-medium">{c.name}</p>
-                        <p className="text-xs text-blue-500">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name || '—'}</p>
+                        <p className="text-xs text-blue-500">Referred by: {users.find(u=>u.id===c.referredBy)?.name || '—'}</p>
                       </div>
                       <Badge className="bg-slate-100 text-blue-700">{c.status}</Badge>
                     </div>
@@ -270,17 +323,17 @@ function AdminView() {
   };
 
   const RecruiterDetail = ({recruiter})=>{
-    const referred = state.candidates.filter(c=>c.referredBy===recruiter.id);
+    const referred = candidates.filter(c=>c.referredBy===recruiter.id);
     return (
       <div>
-        <h4 className="text-sm font-semibold text-blue-700">Referrals by Manager Name</h4>
+        <h4 className="text-sm font-semibold text-blue-700">Referrals by {recruiter.name}</h4>
         <div className="mt-2 space-y-2">
           {referred.length===0 && <p className="text-sm text-blue-500">No referrals yet.</p>}
           {referred.map(c=> (
             <div key={c.id} className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between">
               <div>
                 <p className="font-medium">{c.name}</p>
-                <p className="text-xs text-blue-500">Applied: {state.jobs.find(j=>j.id===c.appliedForJob)?.title || '—'}</p>
+                <p className="text-xs text-blue-500">Applied: {jobs.find(j=>j.id===c.appliedForJob)?.title || '—'}</p>
               </div>
               <div className="text-xs text-blue-600">{c.status}</div>
             </div>
@@ -292,14 +345,71 @@ function AdminView() {
 
   return (
     <AppShell>
-      <Sidebar items={[
-        { label:'Overview', icon:'📊', active: tab==='overview', onClick:()=>setTab('overview') },
-        { label:'Add Manager / Recruiter', icon:'➕', active: tab==='add', onClick:()=>setTab('add') },
-        { label:`Total Managers`, icon:'👥', active: tab==='managers', onClick:()=>setTab('managers'), count: managers.length },
-        { label:`Total Recruiters`, icon:'🧑‍💼', active: tab==='recruiters', onClick:()=>setTab('recruiters'), count: recruiters.length },
-      ]} />
+      {/* Left Sidebar */}
+      <Sidebar>
+        <SidebarButton active={tab==='overview'} onClick={()=>setTab('overview')} left={<span>📊</span>}>Overview</SidebarButton>
+        <SidebarButton active={tab==='add'} onClick={()=>setTab('add')} left={<span>➕</span>}>Add Manager / Recruiter</SidebarButton>
 
-      <main className="flex-1 min-w-0">
+        {/* Totals */}
+        <div className="rounded-xl border p-3 bg-yellow-50 mt-2">
+          <p className="text-xs text-blue-500">Totals</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="rounded-lg border p-2 text-center">
+              <p className="text-[11px] text-blue-500">Managers</p>
+              <p className="text-sm font-semibold text-blue-600">{managers.length}</p>
+            </div>
+            <div className="rounded-lg border p-2 text-center">
+              <p className="text-[11px] text-blue-500">Recruiters</p>
+              <p className="text-sm font-semibold text-blue-600">{recruiters.length}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Expandable Managers */}
+        <div className="mt-2">
+          <SidebarButton
+            active={tab==='managers'}
+            onClick={()=>{ setTab('managers'); dispatch(actions.toggleManagers()); }}
+            left={<span>👥</span>}
+            right={ui.adminSidebar.managersOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+          >
+            Managers ({managers.length})
+          </SidebarButton>
+          {ui.adminSidebar.managersOpen && (
+            <div className="mt-1 ml-2 space-y-1">
+              {managers.map(m => (
+                <button key={m.id} onClick={()=>dispatch(actions.selectAdminUser(m.id))} className={`w-full text-left rounded-lg px-3 py-1.5 text-sm hover:bg-yellow-50 ${ui.adminSidebar.selectedUserId===m.id ? 'bg-blue-100' : ''}`}>
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Expandable Recruiters */}
+        <div className="mt-1">
+          <SidebarButton
+            active={tab==='recruiters'}
+            onClick={()=>{ setTab('recruiters'); dispatch(actions.toggleRecruiters()); }}
+            left={<span>🧑‍💼</span>}
+            right={ui.adminSidebar.recruitersOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+          >
+            Recruiters ({recruiters.length})
+          </SidebarButton>
+          {ui.adminSidebar.recruitersOpen && (
+            <div className="mt-1 ml-2 space-y-1">
+              {recruiters.map(r => (
+                <button key={r.id} onClick={()=>dispatch(actions.selectAdminUser(r.id))} className={`w-full text-left rounded-lg px-3 py-1.5 text-sm hover:bg-yellow-50 ${ui.adminSidebar.selectedUserId===r.id ? 'bg-blue-100' : ''}`}>
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Sidebar>
+
+      {/* Right content */}
+      <main className="flex-1 min-w-0 space-y-6">
         {tab==='overview' && (
           <div className="space-y-6">
             <Card title="Platform Summary">
@@ -314,18 +424,18 @@ function AdminView() {
                 </div>
                 <div className="rounded-lg border p-4 bg-yellow-50 text-center">
                   <p className="text-xs text-blue-500">Open Jobs</p>
-                  <p className="text-xl font-semibold text-blue-500">{state.jobs.length}</p>
+                  <p className="text-xl font-semibold text-blue-500">{jobs.length}</p>
                 </div>
               </div>
             </Card>
 
             <Card title="Recent Jobs" subtitle="Latest posts">
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {state.jobs.map(j => (
+                {jobs.map(j => (
                   <div key={j.id} className="rounded-lg border p-3">
                     <p className="font-semibold">{j.title}</p>
                     <p className="text-xs text-blue-500">{j.location} • {j.salary}</p>
-                    <p className="text-xs mt-2 text-blue-600">Posted by: {state.users.find(u=>u.id===j.createdBy)?.name}</p>
+                    <p className="text-xs mt-2 text-blue-600">Posted by: {users.find(u=>u.id===j.createdBy)?.name}</p>
                   </div>
                 ))}
               </div>
@@ -344,23 +454,18 @@ function AdminView() {
           </Card>
         )}
 
-        {tab==='managers' && (
-          <Card title={`Managers (${managers.length})`} subtitle="Click to inspect each manager">
-            <div className="grid sm:grid-cols-2 gap-4">
-              {managers.map(m => (
-                <details key={m.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{m.name}</p><p className="text-xs text-blue-500">{m.email}</p></div><div className="text-xs text-blue-600">View</div></summary><div className="mt-3"><ManagerDetail manager={m} /></div></details>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {tab==='recruiters' && (
-          <Card title={`Recruiters (${recruiters.length})`} subtitle="Click to inspect each recruiter">
-            <div className="grid sm:grid-cols-2 gap-4">
-              {recruiters.map(r => (
-                <details key={r.id} className="rounded-lg border p-3"><summary className="cursor-pointer flex items-center justify-between"><div><p className="font-semibold">{r.name}</p><p className="text-xs text-blue-500">{r.email}</p></div><div className="text-xs text-blue-600">View</div></summary><div className="mt-3"><RecruiterDetail recruiter={r} /></div></details>
-              ))}
-            </div>
+        {/* Right-side detail when a user is selected from sidebar */}
+        {selectedUser && (
+          <Card
+            title={`${selectedUser.role === 'manager' ? 'Manager' : 'Recruiter'} — ${selectedUser.name}`}
+            subtitle={selectedUser.email}
+            right={<Button className="border" onClick={()=>dispatch(actions.selectAdminUser(null))}>Clear</Button>}
+          >
+            {selectedUser.role === 'manager' ? (
+              <ManagerDetail manager={selectedUser} />
+            ) : (
+              <RecruiterDetail recruiter={selectedUser} />
+            )}
           </Card>
         )}
       </main>
@@ -372,22 +477,30 @@ function AdminView() {
    Manager View
    ------------------ */
 function ManagerView() {
-  const { state, dispatch } = useDB();
-  const user = state.currentUser;
-  const myJobs = state.jobs.filter(j => j.createdBy === user.id);
+  const dispatch = useDispatch();
+  const { users, jobs, candidates } = useApp();
+  const user = useCurrentUser();
+  const myJobs = jobs.filter(j => j.createdBy === user.id);
   const [tab, setTab] = useState('jobs');
   const [form, setForm] = useState({ title:'', description:'', skills:'', salary:'', location:'' });
 
-  const postJob = (e)=>{ e.preventDefault(); if(!form.title) return; const payload = {...form, skills: form.skills.split(',').map(s=>s.trim()).filter(Boolean), createdBy: user.id }; dispatch({type:'ADD_JOB', payload}); setForm({ title:'', description:'', skills:'', salary:'', location:'' }); setTab('jobs'); }
+  const postJob = (e)=>{
+    e.preventDefault();
+    if(!form.title) return;
+    const payload = { ...form, skills: form.skills.split(',').map(s=>s.trim()).filter(Boolean), createdBy: user.id };
+    dispatch(actions.addJob(payload));
+    setForm({ title:'', description:'', skills:'', salary:'', location:'' });
+    setTab('jobs');
+  };
 
   return (
     <AppShell>
-      <Sidebar items={[
-        { label:'Profile', icon:'👤', active: tab==='profile', onClick:()=>setTab('profile') },
-        { label:'Create New Job Post', icon:'➕', active: tab==='create', onClick:()=>setTab('create') },
-        { label:'Total Jobs Posted', icon:'📋', active: tab==='jobs', onClick:()=>setTab('jobs'), count: myJobs.length },
-        { label:'Applications per Job', icon:'🧾', active: tab==='apps', onClick:()=>setTab('apps') },
-      ]} />
+      <Sidebar>
+        <SidebarButton active={tab==='profile'} onClick={()=>setTab('profile')} left={<span>👤</span>}>Profile</SidebarButton>
+        <SidebarButton active={tab==='create'} onClick={()=>setTab('create')} left={<span>➕</span>}>Create New Job Post</SidebarButton>
+        <SidebarButton active={tab==='jobs'} onClick={()=>setTab('jobs')} left={<span>📋</span>} right={<span className="text-xs">{myJobs.length}</span>}>Total Jobs Posted</SidebarButton>
+        <SidebarButton active={tab==='apps'} onClick={()=>setTab('apps')} left={<span>🧾</span>}>Applications per Job</SidebarButton>
+      </Sidebar>
 
       <main className="flex-1 min-w-0">
         {tab==='profile' && <Card title="Profile" subtitle={user.name}><p className="text-sm">Email: {user.email}</p></Card>}
@@ -415,7 +528,7 @@ function ManagerView() {
                   <p className="font-semibold">{j.title}</p>
                   <p className="text-xs text-blue-500">{j.location} • {j.salary}</p>
                   <p className="text-sm text-blue-700 mt-2 line-clamp-2">{j.description}</p>
-                  <div className="text-xs text-blue-700 mt-2">Applicants: {state.candidates.filter(c=>c.appliedForJob===j.id).length}</div>
+                  <div className="text-xs text-blue-700 mt-2">Applicants: {candidates.filter(c=>c.appliedForJob===j.id).length}</div>
                 </div>
               ))}
             </div>
@@ -425,12 +538,12 @@ function ManagerView() {
         {tab==='apps' && (
           <Card title="Applications" subtitle="Applications for your jobs">
             <div className="space-y-3">
-              {state.candidates.filter(c=> myJobs.some(j=>j.id===c.appliedForJob)).map(c=> (
+              {candidates.filter(c=> myJobs.some(j=>j.id===c.appliedForJob)).map(c=> (
                 <div key={c.id} className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between">
                   <div>
                     <p className="font-semibold">{c.name}</p>
-                    <p className="text-xs text-blue-500">Applied for: {state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
-                    <p className="text-xs text-blue-700">Referred by: {state.users.find(u=>u.id===c.referredBy)?.name}</p>
+                    <p className="text-xs text-blue-500">Applied for: {jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
+                    <p className="text-xs text-blue-700">Referred by: {users.find(u=>u.id===c.referredBy)?.name}</p>
                   </div>
                   <div className="text-xs text-blue-700">{c.status}</div>
                 </div>
@@ -447,31 +560,42 @@ function ManagerView() {
    Recruiter View
    ------------------ */
 function RecruiterView(){
-  const { state, dispatch } = useDB();
-  const user = state.currentUser;
-  const myReferrals = state.candidates.filter(c=>c.referredBy===user.id);
-  const [selectedJob, setSelectedJob] = useState(state.jobs[0]?.id || "");
+  const dispatch = useDispatch();
+  const { jobs, candidates, users } = useApp();
+  const user = useCurrentUser();
+  const myReferrals = candidates.filter(c=>c.referredBy===user.id);
+  const [selectedJob, setSelectedJob] = useState(jobs[0]?.id || "");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [form, setForm] = useState({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob });
 
   useEffect(()=>{ setForm(f=>({...f, appliedForJob: selectedJob})); },[selectedJob]);
 
-  const refer = (e)=>{ e.preventDefault(); if(!form.name || !form.email || !form.appliedForJob) return; dispatch({type:'ADD_CANDIDATE', payload:{ ...form, referredBy: user.id, status: 'referred' }}); setForm({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob }); }
+  const refer = (e)=>{
+    e.preventDefault();
+    if(!form.name || !form.email || !form.appliedForJob) return;
+    dispatch(actions.addCandidate({ ...form, referredBy: user.id, status: 'referred' }));
+    setForm({ name:'', email:'', phone:'', resume:'', notes:'', appliedForJob: selectedJob });
+  };
 
-  const openCandidate = (c)=>{ setSelectedCandidate(c); }
-  const updateStatus = (id, status, note='')=>{ const candidate = state.candidates.find(x=>x.id===id); const ch = (candidate.contactHistory||[]).concat([{date:new Date().toISOString(), note}]); dispatch({type:'UPDATE_CANDIDATE', payload:{ id, updates:{ status, contactHistory: ch }}}); if(selectedCandidate?.id===id) setSelectedCandidate({...selectedCandidate, status, contactHistory: ch}); }
+  const openCandidate = (c)=>{ setSelectedCandidate(c); };
+  const updateStatus = (id, status, note='')=>{
+    const candidate = candidates.find(x=>x.id===id);
+    const ch = (candidate?.contactHistory||[]).concat([{date: nowISO(), note}]);
+    dispatch(actions.updateCandidate({ id, updates:{ status, contactHistory: ch }}));
+    if(selectedCandidate?.id===id) setSelectedCandidate({...selectedCandidate, status, contactHistory: ch});
+  };
 
   return (
     <AppShell>
-      <Sidebar items={[
-        { label:'Refer Candidate', icon:'➕', active:true, onClick:()=>{} },
-      ]} />
+      <Sidebar>
+        <SidebarButton active left={<span>➕</span>}>Refer Candidate</SidebarButton>
+      </Sidebar>
 
       <main className="flex-1 min-w-0">
         <div className="space-y-6">
           <Card title="Refer Candidate" subtitle="Select job and provide candidate details">
             <form onSubmit={refer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="block text-sm"><div className="font-medium">Select Job</div><select className="mt-1 w-full rounded-lg border px-3 py-2" value={selectedJob} onChange={(e)=>setSelectedJob(Number(e.target.value))}>{state.jobs.map(j=> <option key={j.id} value={j.id}>#{j.id} — {j.title}</option>)}</select></label>
+              <label className="block text-sm"><div className="font-medium">Select Job</div><select className="mt-1 w-full rounded-lg border px-3 py-2" value={selectedJob} onChange={(e)=>setSelectedJob(Number(e.target.value))}>{jobs.map(j=> <option key={j.id} value={j.id}>#{j.id} — {j.title}</option>)}</select></label>
               <label className="block text-sm"><div className="font-medium">Full name</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.name} onChange={(e)=>setForm({...form, name:e.target.value})} /></label>
               <label className="block text-sm"><div className="font-medium">Email</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.email} onChange={(e)=>setForm({...form, email:e.target.value})} /></label>
               <label className="block text-sm"><div className="font-medium">Phone</div><input className="mt-1 w-full rounded-lg border px-3 py-2" value={form.phone} onChange={(e)=>setForm({...form, phone:e.target.value})} /></label>
@@ -489,7 +613,7 @@ function RecruiterView(){
                   <button key={c.id} onClick={()=>openCandidate(c)} className="w-full text-left rounded-lg p-3 border hover:bg-yellow-50 flex items-center justify-between">
                     <div>
                       <p className="font-medium">{c.name}</p>
-                      <p className="text-xs text-blue-500">{state.jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
+                      <p className="text-xs text-blue-500">{jobs.find(j=>j.id===c.appliedForJob)?.title}</p>
                     </div>
                     <div className="text-xs text-blue-700">{c.status}</div>
                   </button>
@@ -503,7 +627,7 @@ function RecruiterView(){
                   <div>
                     <p className="font-semibold">{selectedCandidate.name}</p>
                     <p className="text-xs text-blue-500">{selectedCandidate.email} • {selectedCandidate.phone}</p>
-                    <p className="text-xs text-blue-500">Applied for: {state.jobs.find(j=>j.id===selectedCandidate.appliedForJob)?.title}</p>
+                    <p className="text-xs text-blue-500">Applied for: {jobs.find(j=>j.id===selectedCandidate.appliedForJob)?.title}</p>
                   </div>
 
                   <div>
@@ -544,31 +668,22 @@ function RecruiterView(){
    Router
    -------- */
 function Router(){
-  const { state } = useDB();
-  if(!state.currentUser) return <Login />;
-  if(state.currentUser.role==='admin') return <AdminView />;
-  if(state.currentUser.role==='manager') return <ManagerView />;
-  if(state.currentUser.role==='recruiter') return <RecruiterView />;
+  const app = useApp();
+  if(!app.currentUser) return <Login />;
+  if(app.currentUser.role==='admin') return <AdminView />;
+  if(app.currentUser.role==='manager') return <ManagerView />;
+  if(app.currentUser.role==='recruiter') return <RecruiterView />;
   return <div className="p-10">Unknown role</div>;
 }
 
 /* -----
-   App
+   App (Provider wired to Redux store)
    ----- */
 export default function App(){
-  const [state, dispatch] = useReducer(reducer, initialState);
-
-  useEffect(()=>{
-    if(!state.currentUser) return;
-    const existing = state.users.find(u=>u.email===state.currentUser.email);
-    if(existing) dispatch({type:'LOGIN', payload:existing});
-  }, [state.currentUser?.email]);
-
-  const value = useMemo(()=>({ state, dispatch }), [state, dispatch]);
-
+  const value = useMemo(()=>({}), []); // dummy to keep similar structure; not used now
   return (
-    <AppDB.Provider value={value}>
+    <Provider store={store} value={value}>
       <Router />
-    </AppDB.Provider>
+    </Provider>
   );
 }
