@@ -10,9 +10,8 @@ import { actions } from "../redux/appSlice";
 import AppShell from "./appShell";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-/* ------------------
-   Admin View (with expandable lists & right panel details)
-   ------------------ */
+   //Admin View (with expandable lists & right panel details)
+   
 function AdminView() {
   const dispatch = useDispatch();
   const { users, jobs, candidates, ui } = useApp();
@@ -207,7 +206,7 @@ function AdminView() {
           <Card
             title={`${selectedUser.role === 'manager' ? 'Manager' : 'Recruiter'} — ${selectedUser.name}`}
             subtitle={selectedUser.email}
-            right={<Button className="border" onClick={()=>dispatch(actions.selectAdminUser(null))}>Clear</Button>}
+            // right={<Button className="border" onClick={()=>dispatch(actions.selectAdminUser(null))}>Clear</Button>}
           >
             {selectedUser.role === 'manager' ? (
               <ManagerDetail manager={selectedUser} />
