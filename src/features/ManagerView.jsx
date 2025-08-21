@@ -474,7 +474,10 @@ function ManagerView() {
                 <strong>Salary:</strong> {selectedJob.salary} <br />
                 <strong>Description:</strong> {selectedJob.description}
               </div>
-              <strong>Candidates:</strong>
+              <div >
+              <strong>Candidates:</strong>{candidates.length}
+                
+              </div>
               <div className="mt-2 space-y-3">
                 {jobApplicants.length === 0 && (
                   <div className="text-blue-500">
@@ -523,7 +526,7 @@ function ManagerView() {
                             }
                           >
                             <option value="">—</option>
-                            {users.map((u) => (
+                            {users.filter(u => u.role === "recruiter").map((u) => (
                               <option key={u.id} value={u.id}>
                                 {u.name}
                               </option>
