@@ -102,6 +102,10 @@ const appSlice = createSlice({
       const idx = state.candidates.findIndex((c) => c.id === id);
       if (idx > -1) state.candidates[idx] = { ...state.candidates[idx], ...updates };
     },
+    deleteJob(state, action) {
+      const id = action.payload;
+      state.jobs = state.jobs.filter(j => j.id !== id);
+    },
     // UI (Admin sidebar behavior)
     toggleManagers(state) {
       state.ui.adminSidebar.managersOpen = !state.ui.adminSidebar.managersOpen;
