@@ -42,7 +42,9 @@ function RecruiterView(){
   return (
     <AppShell>
       <Sidebar>
+        <SidebarButton active={true}>refered</SidebarButton>
         <SidebarButton active left={<span>➕</span>}>Refer Candidate</SidebarButton>
+        <SidebarButton>My Referrals <Badge>{myReferrals.length}</Badge></SidebarButton>
       </Sidebar>
 
       <main className="flex-1 min-w-0">

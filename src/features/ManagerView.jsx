@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+ import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useApp, useCurrentUser } from "../redux/hooks";
 import Card from "../components/Card";
@@ -10,16 +10,22 @@ import { actions } from "../redux/appSlice";
 import AppShell from "./appShell";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-/* ------------------
-   Manager View
-   ------------------ */
 function ManagerView() {
   const dispatch = useDispatch();
   const { users, jobs, candidates, mi } = useApp();
   const user = useCurrentUser();
   const myJobs = jobs.filter((j) => j.createdBy === user.id);
-
   const [tab, setTab] = useState("jobs");
+  const [searchQuery, setSearchQuery] = useState(""); 
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [isEditingJob, setIsEditingJob] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    location: "",
+    salary: "",
+    skills: "",
+  });
 
   const [form, setForm] = useState({
     title: "",
@@ -93,14 +99,31 @@ function ManagerView() {
 
   const selectJob = (jobId) => {
     dispatch(actions.selectManagerJob(jobId));
+    setSearchQuery(""); // clear search when switching jobs
     setTab("jobDetail");
+    setIsEditingJob(false);
   };
-  const selectedJob =
-    jobs.find((j) => j.id === mi.managerSidebar.selectedJobId) || null;
+  const selectedJob = jobs.find((j) => j.id === mi.managerSidebar.selectedJobId) || null;
 
-  const jobApplicants = selectedJob
-    ? candidates.filter((c) => c.appliedForJob === selectedJob.id)
-    : [];
+  // Candidates who applied for the selected job
+  const jobApplicants = selectedJob ? candidates.filter((c) => c.appliedForJob === selectedJob.id) : [];
+
+  // Filter candidates per job by name using searchQuery
+  const filteredApplicants = jobApplicants.filter((c) => {
+    const nameMatch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const emailMatch = c.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const contactmatch = c.phone.toLowerCase().includes(searchQuery.toLowerCase());
+    return nameMatch || emailMatch || contactmatch;
+  });
+
+  // filter all candidates by name using searchQuery
+  const filteredCandidates = candidates.filter((c) => { 
+    const nameMatch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const emailMatch = c.email.toLowerCase().includes(searchQuery.toLowerCase());   
+    const contactmatch = c.phone.toLowerCase().includes(searchQuery.toLowerCase());
+    return nameMatch || emailMatch || contactmatch;
+
+  });
 
   const handleReferredByChange = (candidateId, newReferredBy) => {
     dispatch(
@@ -111,21 +134,82 @@ function ManagerView() {
     );
   };
 
+   const startEditJob = () => {
+    if (!selectedJob) return;
+    setIsEditingJob(true);
+    setEditForm({
+      title: selectedJob.title || "",
+      description: selectedJob.description || "",
+      location: selectedJob.location || "",
+      salary: selectedJob.salary || "",
+      skills: selectedJob.skills ? selectedJob.skills.join(", ") : "",
+    });
+  };
+
+  const cancelEditJob = () => {
+    setIsEditingJob(false);
+    setEditForm({
+    title: "",
+    employmentType: "",
+    industry: "",
+    functionalArea: "",
+    description: "",
+    minExp: "",
+    maxExp: "",
+    salaryType: "yearly",
+    minSalary: "",
+    maxSalary: "",
+    jobLocation: "",
+    jobNature: "fulltime",
+    shifts: [],
+    questionnaire: [],
+    companyName: "",
+    companyDescription: "",
+    skills: "",
+  });
+};
+
+   const saveJobEdits = (e) => {
+    e.preventDefault();
+    if (!selectedJob) return;
+
+    dispatch(
+      actions.updateJob({
+        id: selectedJob.id,
+        updates: {
+          title: editForm.title,
+          description: editForm.description,
+          location: editForm.location,
+          salary: editForm.salary,
+          skills: editForm.skills
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        },
+      })
+    );
+    setIsEditingJob(false);
+  };
+ 
+ const deleteCurrentJob = () => {
+    if (!selectedJob) return;
+    if (window.confirm("Are you sure you want to delete this job?")) {
+      dispatch(actions.deleteJob(selectedJob.id));
+      dispatch(actions.selectManagerJob(null));
+      setTab("jobs"); // go back to jobs list
+      setIsEditingJob(false);
+    }
+  };
+
+  
+
   return (
     <AppShell>
       <Sidebar>
-        <SidebarButton
-          active={tab === "profile"}
-          onClick={() => setTab("profile")}
-          left={<span>👤</span>}
-        >
+        <SidebarButton active={tab === "profile"} onClick={() => setTab("profile")} left={<span>👤</span>}>
           Profile
         </SidebarButton>
-        <SidebarButton
-          active={tab === "create"}
-          onClick={() => setTab("create")}
-          left={<span>➕</span>}
-        >
+        <SidebarButton active={tab === "create"} onClick={() => setTab("create")} left={<span>➕</span>}>
           Create New Job Post
         </SidebarButton>
         <div className="mt-2">
@@ -136,13 +220,7 @@ function ManagerView() {
               dispatch(actions.toggleManagerJobs());
             }}
             left={<span>📋</span>}
-            right={
-              mi.managerSidebar.jobsOpen ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )
-            }
+            right={mi.managerSidebar.jobsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           >
             Total Jobs Posted
           </SidebarButton>
@@ -153,9 +231,7 @@ function ManagerView() {
                   key={j.id}
                   onClick={() => selectJob(j.id)}
                   className={`w-full text-left rounded-lg px-3 py-1.5 text-sm hover:bg-yellow-50 ${
-                    mi.managerSidebar.selectedJobId === j.id
-                      ? "bg-blue-100"
-                      : ""
+                    mi.managerSidebar.selectedJobId === j.id ? "bg-blue-100" : ""
                   }`}
                 >
                   {j.title}
@@ -164,11 +240,7 @@ function ManagerView() {
             </div>
           )}
         </div>
-        <SidebarButton
-          active={tab === "apps"}
-          onClick={() => setTab("apps")}
-          left={<span>🧾</span>}
-        >
+        <SidebarButton active={tab === "apps"} onClick={() => setTab("apps")} left={<span>🧾</span>}>
           Applications per Job
         </SidebarButton>
       </Sidebar>
@@ -180,7 +252,7 @@ function ManagerView() {
           </Card>
         )}
 
-        {tab === "create" && (
+         {tab === "create" && (
           <Card title="Create Job" subtitle="Fill basic details">
             <form onSubmit={postJob} className="space-y-6">
               {/* Job Title */}
@@ -462,30 +534,122 @@ function ManagerView() {
               >
                 Post Job
               </button>
+              {/* Job creation form as before */}
+              {/* ... */}
             </form>
           </Card>
         )}
 
         {tab === "jobDetail" && selectedJob && (
-          <div className=" gap-6 p-4">
+          <div className="p-4 space-y-4">
             <Card title={`Job Detail: ${selectedJob.title}`}>
-              <div className="mb-4">
-                <strong>Location:</strong> {selectedJob.location} <br />
-                <strong>Salary:</strong> {selectedJob.salary} <br />
-                <strong>Description:</strong> {selectedJob.description}
-              </div>
-              <div >
-              <strong>Candidates:</strong>{candidates.length}
-                
-              </div>
-              <div className="mt-2 space-y-3">
-                {jobApplicants.length === 0 && (
-                  <div className="text-blue-500">
-                    No candidates applied yet.
+              {isEditingJob ? (
+                <form onSubmit={saveJobEdits} className="space-y-4">
+                  <div>
+                    <label className="font-semibold block">Job Title</label>
+                    <input
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full border px-2 py-1 rounded"
+                      required
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="font-semibold block">Location</label>
+                    <input
+                      type="text"
+                      value={editForm.location}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      className="w-full border px-2 py-1 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold block">Salary</label>
+                    <input
+                      type="text"
+                      value={editForm.salary}
+                      onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
+                      className="w-full border px-2 py-1 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold block">Description</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full border px-2 py-1 rounded"
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold block">Skills (comma separated)</label>
+                    <input
+                      type="text"
+                      value={editForm.skills}
+                      onChange={(e) => setEditForm({ ...editForm, skills: e.target.value })}
+                      className="w-full border px-2 py-1 rounded"
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-2xl">
+                      Save
+                    </button>
+                    <button type="button" onClick={cancelEditJob} className="bg-yellow-400  px-4 py-2 rounded-2xl">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <strong>Location:</strong> {selectedJob.location} <br />
+                    <strong>Salary:</strong> {selectedJob.salary} <br />
+                    <strong>Description:</strong> {selectedJob.description}
+                  </div>
+                  <div className="mb-4">
+                    <button onClick={startEditJob} className="mr-3 bg-blue-400 text-white px-4 py-2 rounded-2xl">
+                      Edit
+                    </button>
+                    <button onClick={deleteCurrentJob} className="bg-yellow-500 px-4 py-2 rounded-2xl">
+                      Delete
+                    </button>
+                  
+                  <button
+                    onClick={() => dispatch(actions.toggleJobActive(selectedJob.id))}
+                    className={`px-2 py-2 mx-2 rounded-xl font-bold
+                    ${selectedJob.isActive ? "bg-green-600 text-white" : "bg-gray-400 text-white"}`}
+                  >
+                    { selectedJob.isActive ? "Disable Post" : "Enable Post"}
+                 </button>
+                  {/* <div className="mb-4">
+                    <span
+                      className={`inline-block px-3 py-1 rounded text-xs font-bold
+                      ${selectedJob.isActive ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"}`}
+                    >
+                      {selectedJob.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div> */}
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center justify-between mb-3">
+                <div>Candidates ({filteredApplicants.length})</div>
+                <input
+                  type="text"
+                  placeholder="Search by name, email or contact"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="rounded border px-2 py-1"
+                />
+              </div>
+
+              <div className="space-y-3">
+                {filteredApplicants.length === 0 && <div className="text-blue-500">No candidates match your search.</div>}
                 <div className="grid grid-cols-3 space-x-3">
-                  {jobApplicants.map((c) => (
+                  {filteredApplicants.map((c) => (
                     <div
                       key={c.id}
                       className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between"
@@ -506,12 +670,9 @@ function ManagerView() {
                             {c.resume}
                           </a>
                         </div>
+                        <div className="text-xs text-blue-500">Notes: {c.notes}</div>
                         <div className="text-xs text-blue-500">
-                          Notes: {c.notes}
-                        </div>
-                        <div className="text-xs text-blue-500">
-                          Status:{" "}
-                          <span className="text-blue-700">{c.status}</span>
+                          Status: <span className="text-blue-700">{c.status}</span>
                         </div>
                         <div className="text-xs text-blue-600">
                           Referred by:{" "}
@@ -519,18 +680,17 @@ function ManagerView() {
                             className="text-xs text-blue-600 border rounded px-1"
                             value={c.referredBy || ""}
                             onChange={(e) =>
-                              handleReferredByChange(
-                                c.id,
-                                Number(e.target.value)
-                              )
+                              handleReferredByChange(c.id, Number(e.target.value))
                             }
                           >
                             <option value="">—</option>
-                            {users.filter(u => u.role === "recruiter").map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.name}
-                              </option>
-                            ))}
+                            {users
+                              .filter((u) => u.role === "recruiter")
+                              .map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.name}
+                                </option>
+                              ))}
                           </select>
                         </div>
                       </div>
@@ -541,36 +701,49 @@ function ManagerView() {
             </Card>
           </div>
         )}
-
         {tab === "apps" && (
-          <Card title="Applications" subtitle="Applications for your jobs">
-            <div className="space-y-3">
-              {candidates
-                .filter((c) => myJobs.some((j) => j.id === c.appliedForJob))
+          <div>
+            
+          <Card title="Candidates ">
+            <input
+              type="text"
+              placeholder="Search by name, email or contact"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded border px-2 py-1 mb-4"
+              />
+            <div className="grid lg:grid-col-4 md:grid-cols-3  gap-3">
+              {filteredCandidates
+                 
                 .map((c) => (
                   <div
                     key={c.id}
-                    className="rounded-lg border p-3 bg-yellow-50 flex items-start justify-between"
+                    className="rounded-lg border p-3 bg-yellow-50 flex g items-start justify-between  "
                   >
-                    <div>
+                    <div className="space-y-1">
                       <p className="font-semibold">{c.name}</p>
                       <p className="text-xs text-blue-500">
-                        Applied for:{" "}
-                        {jobs.find((j) => j.id === c.appliedForJob)?.title}
+                        • {c.email} 
+                        <br />
+                        • {c.phone}
                       </p>
-                      <p className="text-xs text-blue-700">
-                        Referred by:{" "}
-                        {users.find((u) => u.id === c.referredBy)?.name}
+                      <p className="text-xs text-blue-500">
+                        Applied for: {jobs.find((j) => j.id === c.appliedForJob)?.title}
                       </p>
+                      {/* <p className="text-xs text-blue-700">
+                        Referred by: {users.find((u) => u.id === c.referredBy)?.name}
+                      </p> */}
                     </div>
-                    <div className="text-xs text-blue-700">{c.status}</div>
+                    {/* <div className="text-xs text-blue-700">{c.status}</div> */}
                   </div>
                 ))}
             </div>
           </Card>
+          </div>
         )}
       </main>
     </AppShell>
   );
 }
+
 export default ManagerView;

@@ -28,11 +28,11 @@ const initialUsers = [
 ];
 
 const initialJobs = [
-  { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React", "Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: nowISO() },
-  { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO() },
-  { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 3, createdAt: nowISO() },
-  { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO() },
-  { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO() },
+  { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React", "Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: nowISO(), isActive: true },
+  { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true },
+  { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 3, createdAt: nowISO(), isActive: true },
+  { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true },
+  { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true },
 ];
 
 const initialCandidates = [
@@ -86,7 +86,7 @@ const appSlice = createSlice({
         state.jobs.unshift(action.payload);
       },
       prepare(job) {
-        return { payload: { id: Number(job.id) || Number(nanoid(5).replace(/\D/g, "").slice(0, 3)) || Math.floor(Math.random() * 1000), createdAt: nowISO(), ...job } };
+        return { payload: { id: Number(job.id) || Number(nanoid(5).replace(/\D/g, "").slice(0, 3)) || Math.floor(Math.random() * 1000), createdAt: nowISO(), ...job, isActive: job.isActive !== undefined ? job.isActive : true, } };
       },
     },
     addCandidate: {
@@ -101,6 +101,13 @@ const appSlice = createSlice({
       const { id, updates } = action.payload;
       const idx = state.candidates.findIndex((c) => c.id === id);
       if (idx > -1) state.candidates[idx] = { ...state.candidates[idx], ...updates };
+    },
+    updateJob(state, action) {
+      const { id, updates } = action.payload;
+      const idx = state.jobs.findIndex((j) => j.id === id);
+      if (idx > -1) {
+        state.jobs[idx] = { ...state.jobs[idx], ...updates };
+      }
     },
     deleteJob(state, action) {
       const id = action.payload;
@@ -122,6 +129,11 @@ const appSlice = createSlice({
     },
     selectManagerJob(state, action) {
       state.mi.managerSidebar.selectedJobId = action.payload;
+    },
+    toggleJobActive(state, action) {
+      const id= action.payload;
+      const idx=state.jobs.findIndex(j => j.id===id);
+      if(idx > -1){ state.jobs[idx].isActive = !state.jobs[idx].isActive; }
     },
   },
 });
