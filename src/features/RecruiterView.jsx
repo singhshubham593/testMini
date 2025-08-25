@@ -1,287 +1,248 @@
- import { useState, useEffect } from "react";
+ import React, { useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { actions} from "../redux/appSlice";
-import AppShell from "../features/AppShell";
-import Sidebar from "../components/Sidebar";
-import Card from "../components/Card";
-import Button from "../components/Button";
+import { actions } from "../redux/appSlice";
+import {
+  ArrowLeft,
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  Mail,
+  User,
+  Phone,
+  MapPin,
+} from "lucide-react";
+import AppShell from "./AppShell";
 
-function RecruiterView() {
-  const dispatch = useDispatch();
+// UI Components (Card, SectionTitle, Sidebar, etc.)
 
-  // Redux state
-  const user = useSelector((state) => state.app.currentUser);
-  const jobs = useSelector((state) => state.app.jobs);
-  const candidates = useSelector((state) => state.app.candidates);
+const Card = ({ className = "", children }) => (
+  <div className={`rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 ${className}`}>
+    {children}
+  </div>
+);
 
-  // Recruiter-specific data
-  const myReferrals = candidates.filter((c) => c.referredBy === user?.id);
-  const [selectedJob, setSelectedJob] = useState(jobs[0]?.id || "");
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+const SectionTitle = ({ icon: Icon, title, right }) => (
+  <div className="flex items-center justify-between gap-4 px-5 py-3 border-b border-gray-100">
+    <div className="flex items-center gap-2 text-gray-800">
+      {Icon && <Icon className="h-5 w-5" />}
+      <h3 className="font-semibold">{title}</h3>
+    </div>
+    {right}
+  </div>
+);
 
-  // Local form state
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    resume: "",
-    notes: "",
-    appliedForJob: selectedJob,
-  });
-
-  useEffect(() => {
-    setForm((f) => ({ ...f, appliedForJob: selectedJob }));
-  }, [selectedJob]);
-
-  // Dispatch candidate add
-  const refer = (e) => {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.appliedForJob) return;
-
-    dispatch(
-      actions.addCandidate({
-        ...form,
-        referredBy: user.id,
-        status: "referred",
-      })
-    );
-
-    // reset form
-    setForm({
-      name: "",
-      email: "",
-      phone: "",
-      resume: "",
-      notes: "",
-      appliedForJob: selectedJob,
-    });
-  };
-
-  // Open candidate details
-  const openCandidate = (c) => {
-    setSelectedCandidate(c);
-  };
-
-  // Update candidate status & notes
-  const updateStatus = (id, status, note = "") => {
-    const candidate = candidates.find((x) => x.id === id);
-    const ch = (candidate.contactHistory || []).concat([
-      { date: new Date().toISOString(), note },
-    ]);
-
-    dispatch(
-      actions.updateCandidate({
-        id,
-        updates: { status, contactHistory: ch },
-      })
-    );
-
-    if (selectedCandidate?.id === id) {
-      setSelectedCandidate({
-        ...selectedCandidate,
-        status,
-        contactHistory: ch,
-      });
-    }
-  };
-
+function JobSidebar({ jobs, selectedJobId, onSelect }) {
   return (
-    <AppShell>
-      <Sidebar
-        items={[{ label: "Refer Candidate", icon: "➕", active: true, onClick: () => {} }]}
-      />
-
-      <main className="flex-1 min-w-0">
-        <div className="space-y-6">
-          {/* Refer candidate form */}
-          <Card title="Refer Candidate" subtitle="Select job and provide candidate details">
-            <form
-              onSubmit={refer}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-            >
-              <label className="block text-sm">
-                <div className="font-medium">Select Job</div>
-                <select
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={selectedJob}
-                  onChange={(e) => setSelectedJob(Number(e.target.value))}
-                >
-                  {jobs.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      #{j.id} — {j.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block text-sm">
-                <div className="font-medium">Full name</div>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </label>
-
-              <label className="block text-sm">
-                <div className="font-medium">Email</div>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </label>
-
-              <label className="block text-sm">
-                <div className="font-medium">Phone</div>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </label>
-
-              <label className="block text-sm">
-                <div className="font-medium">Resume URL</div>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={form.resume}
-                  onChange={(e) => setForm({ ...form, resume: e.target.value })}
-                />
-              </label>
-
-              <label className="block text-sm sm:col-span-2">
-                <div className="font-medium">Notes</div>
-                <textarea
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                />
-              </label>
-
-              <div className="sm:col-span-2 flex gap-3">
-                <Button type="submit" className="bg-blue-600 text-white">
-                  Refer
-                </Button>
-                <Button
-                  type="button"
-                  className="border"
-                  onClick={() =>
-                    setForm({
-                      name: "",
-                      email: "",
-                      phone: "",
-                      resume: "",
-                      notes: "",
-                      appliedForJob: selectedJob,
-                    })
-                  }
-                >
-                  Clear
-                </Button>
+    <aside className="w-full md:w-80 border-r border-gray-200 bg-white rounded-2xl ">
+      <div className="p-4 ">
+        <h2 className="text-lg font-semibold">Jobs</h2>
+        <p className="text-sm text-gray-500">Created by managers</p>
+      </div>
+      <div className="px-2 space-y-2 overflow-auto max-h-[calc(100vh-96px)] pb-6  ">
+        {jobs.map((job) => (
+          <button
+            key={job.id}
+            onClick={() => onSelect(job.id)}
+            className={`w-full mt-2 text-left p-3 rounded-xl transition shadow-sm ring-1 ${
+              selectedJobId === job.id
+                ? "bg-white ring-blue-500/50"
+                : "bg-white hover:ring-gray-300 ring-gray-200"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5">
+                <Briefcase className="h-5 w-5" />
               </div>
-            </form>
-          </Card>
-
-          {/* Referrals + Candidate details */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            <Card title="My Referrals" subtitle="Click a candidate to view details">
-              <div className="space-y-2">
-                {myReferrals.length === 0 && (
-                  <p className="text-sm text-blue-500">No referrals yet.</p>
-                )}
-                {myReferrals.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => openCandidate(c)}
-                    className="w-full text-left rounded-lg p-3 border hover:bg-yellow-50 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="font-medium">{c.name}</p>
-                      <p className="text-xs text-blue-500">
-                        {jobs.find((j) => j.id === c.appliedForJob)?.title}
-                      </p>
-                    </div>
-                    <div className="text-xs text-blue-700">{c.status}</div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            <Card
-              title="Candidate Details"
-              subtitle="Update status & add contact notes"
-            >
-              {selectedCandidate ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-semibold">{selectedCandidate.name}</p>
-                    <p className="text-xs text-blue-500">
-                      {selectedCandidate.email} • {selectedCandidate.phone}
-                    </p>
-                    <p className="text-xs text-blue-500">
-                      Applied for:{" "}
-                      {jobs.find((j) => j.id === selectedCandidate.appliedForJob)
-                        ?.title}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium">Status</p>
-                    <div className="mt-2 flex gap-2 flex-wrap">
-                      {["referred", "contacted", "shortlisted", "rejected", "hired"].map(
-                        (s) => (
-                          <button
-                            key={s}
-                            onClick={() =>
-                              updateStatus(
-                                selectedCandidate.id,
-                                s,
-                                `Marked ${s}`
-                              )
-                            }
-                            className={`rounded-md px-3 py-1 text-sm ${
-                              selectedCandidate.status === s
-                                ? "bg-blue-600 text-white"
-                                : "border"
-                            }`}
-                          >
-                            {s}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium">Notes</p>
-                    <p className="text-sm text-blue-700 mt-1">
-                      {selectedCandidate.notes || "—"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium">Contact History</p>
-                    <ul className="mt-2 space-y-1 text-xs text-blue-700">
-                      {(selectedCandidate.contactHistory || []).map((h, i) => (
-                        <li key={i}>
-                          • {new Date(h.date).toLocaleString()}: {h.note}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900">{job.title}</span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(job.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
-              ) : (
-                <p className="text-sm text-blue-500">
-                  Select a candidate from the list to view details.
-                </p>
-              )}
-            </Card>
-          </div>
-        </div>
-      </main>
-    </AppShell>
+                <div className="text-sm text-gray-600 mt-1">
+                  Location: {job.location} | Salary: {job.salary}
+                </div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </aside>
   );
 }
 
-export default RecruiterView;
+function JobDetails({ job, onSelectApplicant }) {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <SectionTitle icon={Briefcase} title="Job Details" />
+        <div className="p-5 text-sm space-y-2">
+          <div><strong>Title:</strong> {job.title}</div>
+          <div><strong>Description:</strong> {job.description}</div>
+          <div><strong>Skills:</strong> {job.skills.join(", ")}</div>
+          <div><strong>Location:</strong> {job.location}</div>
+          <div><strong>Salary:</strong> {job.salary}</div>
+          <div><strong>Active:</strong> {job.isActive ? "Yes" : "No"}</div>
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle icon={User} title={`Applicants`} />
+        <div className="p-3">
+          {job.applicants && job.applicants.length > 0 ? (
+            <ul className=" grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {job.applicants.map((c) => (
+                <li
+                  key={c.id}
+                  className="p-3 rounded-xl ring-1 ring-gray-200 hover:bg-gray-50 flex justify-between items-center"
+                >
+                  <div>
+                    <div className="font-medium">{c.name}</div>
+                    <div className="text-xs text-gray-500">{c.email}</div>
+                  </div>
+                  <button
+                    onClick={() => onSelectApplicant(c)}
+                    className="text-blue-600 text-sm hover:underline flex items-center gap-1"
+                  >
+                    View <ChevronRight className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-gray-500 text-sm p-4">No applicants yet.</div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function CandidateDetails({ candidate, onBack }) {
+  const dispatch = useDispatch();
+  const [note, setNote] = useState("");
+  const [stage, setStage] = useState(candidate.status);
+
+  const addNote = () => {
+    if (!note.trim()) return;
+    const newHistory = [...(candidate.contactHistory || []), { date: new Date().toISOString(), note }];
+    dispatch(actions.updateCandidate({ id: candidate.id, updates: { contactHistory: newHistory } }));
+    setNote("");
+  };
+
+  const updateStage = (e) => {
+    setStage(e.target.value);
+    dispatch(actions.updateCandidate({ id: candidate.id, updates: { status: e.target.value } }));
+  };
+
+  return (
+    <div className="space-y-6">
+      <button
+        onClick={() => onBack()}
+        className="text-sm text-gray-700 hover:underline flex items-center gap-1"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back
+      </button>
+
+      <Card>
+        <SectionTitle icon={User} title="Candidate Details" />
+        <div className="p-5 space-y-2 text-sm">
+          <div><strong>Name:</strong> {candidate.name}</div>
+          <div><strong>Email:</strong> {candidate.email}</div>
+          <div><strong>Phone:</strong> {candidate.phone}</div>
+          <div><strong>Notes:</strong> {candidate.notes}</div>
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle icon={Calendar} title="Stage" />
+        <div className="p-5">
+          <select
+            value={stage}
+            onChange={updateStage}
+            className="rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500 p-2"
+          >
+            {["contacted","screening","shortlisted","interview","offer","hired"].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle icon={Mail} title="Contact History" />
+        <div className="p-5 space-y-2">
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add note"
+            className="w-full p-2 rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500"
+          />
+          <button onClick={addNote} className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+            Add Note
+          </button>
+
+          <ul className="mt-3 space-y-2">
+            {(candidate.contactHistory || []).map((h, i) => (
+              <li key={i} className="p-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 text-sm">
+                {new Date(h.date).toLocaleDateString()}: {h.note}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export default function RecruiterView() {
+  const dispatch = useDispatch();
+  const jobs = useSelector((state) => state.app.jobs);
+  const candidates = useSelector((state) => state.app.candidates);
+
+  // Map candidates to their jobs
+  const jobsWithApplicants = useMemo(() =>
+    jobs.map(j => ({
+      ...j,
+      applicants: candidates.filter(c => c.appliedForJob === j.id)
+    })), [jobs, candidates]
+  );
+
+  const [selectedJobId, setSelectedJobId] = useState(jobsWithApplicants[0]?.id || null);
+  const selectedJob = jobsWithApplicants.find(j => j.id === selectedJobId);
+
+  const [view, setView] = useState("job");
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+
+  function handleSelectCandidate(c) {
+    setSelectedCandidate(c);
+    setView("candidate");
+  }
+
+  function backToJob() {
+    setView("job");
+    setSelectedCandidate(null);
+  }
+
+  return (
+    <AppShell>
+      <div className="flex flex-col md:flex-row gap-6 w-full">
+        <JobSidebar
+          jobs={jobsWithApplicants}
+          selectedJobId={selectedJobId}
+          onSelect={(id) => { setSelectedJobId(id); backToJob(); }}
+        />
+        <main className="flex-1">
+          {view === "job" && selectedJob && (
+            <JobDetails job={selectedJob} onSelectApplicant={handleSelectCandidate} />
+          )}
+          {view === "candidate" && selectedCandidate && (
+            <CandidateDetails candidate={selectedCandidate} onBack={backToJob} />
+          )}
+          {!selectedJob && <div className="text-gray-500">No job selected.</div>}
+        </main>
+      </div>
+    </AppShell>
+  );
+}
