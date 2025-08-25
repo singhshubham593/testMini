@@ -28,11 +28,11 @@ const initialUsers = [
 ];
 
 const initialJobs = [
-  { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React", "Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: nowISO(), isActive: true },
-  { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true },
-  { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 3, createdAt: nowISO(), isActive: true },
-  { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true },
-  { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true },
+  { id: 1, title: "Frontend Engineer", description: "React + Tailwind", skills: ["React", "Tailwind"], salary: "₹10-15 LPA", location: "Bengaluru", createdBy: 2, createdAt: nowISO(), isActive: true,recruiterIds: [] },
+  { id: 2, title: "Backend Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true, recruiterIds: [] },
+  { id: 3, title: "React Developer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 3, createdAt: nowISO(), isActive: true, recruiterIds: [] },
+  { id: 4, title: "Next js Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true, recruiterIds: [] },
+  { id: 5, title: "Node Engineer", description: "Node.js APIs", skills: ["Node", "SQL"], salary: "₹12-18 LPA", location: "Remote", createdBy: 2, createdAt: nowISO(), isActive: true,recruiterIds: [] },
 ];
 
 const initialCandidates = [
@@ -86,7 +86,7 @@ const appSlice = createSlice({
         state.jobs.unshift(action.payload);
       },
       prepare(job) {
-        return { payload: { id: Number(job.id) || Number(nanoid(5).replace(/\D/g, "").slice(0, 3)) || Math.floor(Math.random() * 1000), createdAt: nowISO(), ...job, isActive: job.isActive !== undefined ? job.isActive : true, } };
+        return { payload: { id: Number(job.id) || Number(nanoid(5).replace(/\D/g, "").slice(0, 3)) || Math.floor(Math.random() * 1000), createdAt: nowISO(), ...job, isActive: job.isActive !== undefined ? job.isActive : true,recruiterIds: job.recruiterIds || [], } };
       },
     },
     addCandidate: {
