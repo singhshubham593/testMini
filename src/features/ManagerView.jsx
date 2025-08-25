@@ -543,6 +543,7 @@ function ManagerView() {
         {tab === "jobDetail" && selectedJob && (
           <div className="p-4 space-y-4">
             <Card title={`Job Detail: ${selectedJob.title}`}>
+              
               {isEditingJob ? (
                 <form onSubmit={saveJobEdits} className="space-y-4">
                   <div>
@@ -603,10 +604,36 @@ function ManagerView() {
                 </form>
               ) : (
                 <>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
                   <div className="mb-4">
                     <strong>Location:</strong> {selectedJob.location} <br />
                     <strong>Salary:</strong> {selectedJob.salary} <br />
                     <strong>Description:</strong> {selectedJob.description}
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-2">Assign Recruiter</label>
+                   <select
+    value={selectedJob.recruiterId || ""}
+    onChange={(e) =>
+      dispatch(
+        actions.updateJob({
+          id: selectedJob.id,
+          updates: { recruiterId: Number(e.target.value) },
+        })
+      )
+    }
+    className="border rounded p-2 w-full max-w-xs"
+  >
+    <option value="">Select recruiter</option>
+    {users
+      .filter((u) => u.role === "recruiter")
+      .map((r) => (
+        <option key={r.id} value={r.id}>
+          {r.name}
+        </option>
+      ))}
+                    </select>
+                  </div>
                   </div>
                   <div className="mb-4">
                     <button onClick={startEditJob} className="mr-3 bg-blue-400 text-white px-4 py-2 rounded-2xl">
@@ -632,9 +659,11 @@ function ManagerView() {
                     </span>
                   </div> */}
                   </div>
+                  
                 </>
               )}
-
+              
+              
               <div className="flex items-center justify-between mb-3">
                 <div>Candidates ({filteredApplicants.length})</div>
                 <input
@@ -674,7 +703,7 @@ function ManagerView() {
                         <div className="text-xs text-blue-500">
                           Status: <span className="text-blue-700">{c.status}</span>
                         </div>
-                        <div className="text-xs text-blue-600">
+                        {/* <div className="text-xs text-blue-600">
                           Referred by:{" "}
                           <select
                             className="text-xs text-blue-600 border rounded px-1"
@@ -692,7 +721,7 @@ function ManagerView() {
                                 </option>
                               ))}
                           </select>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   ))}
