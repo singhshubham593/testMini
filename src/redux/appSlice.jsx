@@ -37,12 +37,12 @@ const initialJobs = [
 
 const initialCandidates = [
   { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
-  { id: 1, name: "Riya Sen", email: "riya@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 3, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
-  { id: 2, name: "Sayan", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
-  { id: 3, name: "Radha", email: "radha@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
-  { id: 2, name: "Sayan", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 3, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
-  { id: 3, name: "Radha", email: "radha@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 4, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
-  { id: 4, name: "Vinod", email: "vinod@example.com", phone: "+91 33333 33333", resume: "https://example.com/vinod.pdf", notes: " API skills", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 2, name: "Neha", email: "neha@example.com", phone: "+91 90000 11111", resume: "https://example.com/riya.pdf", notes: "Strong API skills", appliedForJob: 3, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 3, name: "Sayan", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 4, name: "Radha", email: "radha@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 2, referredBy: 3, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 5, name: "Shivam", email: "sayan@example.com", phone: "+91 11111 11111", resume: "https://example.com/sayan.pdf", notes: "problem solver", appliedForJob: 3, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 6, name: "Radhika", email: "radhika@example.com", phone: "+91 22222 22222", resume: "https://example.com/radha.pdf", notes: "react skills", appliedForJob: 4, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
+  { id: 7, name: "Vinod", email: "vinod@example.com", phone: "+91 33333 33333", resume: "https://example.com/vinod.pdf", notes: " API skills", appliedForJob: 1, referredBy: 2, status: "contacted", contactHistory: [{ date: nowISO(), note: "WhatsApp message" }] },
 ];
 
 const appSlice = createSlice({
